@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Leaderboard · FirstTX</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="pages.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="site-head">
+    <a class="brand" href="index.html" aria-label="FirstTX home"><img src="logo.png" alt="FirstTX"></a>
+    <nav class="nav" id="nav" aria-label="Primary">
+      <a class="on" href="leaderboard.html">Leaderboard</a>
+      <a href="rules.html">Rules</a>
+      <a href="faq.html">FAQ</a>
+    </nav>
+    <a class="pill head-cta" href="#">Enter Round</a>
+    <button class="nav-toggle" id="navToggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav"><i></i></button>
+  </header>
+
+  <div class="page-head">
+    <p class="eyebrow">Round 001 · live</p>
+    <h1>Leaderboard</h1>
+    <p class="lede">Every wallet started this round empty. Profit and loss is measured against each wallet's opening deposit and refreshes every 5 minutes.</p>
+  </div>
+
+  <div class="round-bar">
+    <div class="round-cell">
+      <p class="round-label">Round ends in</p>
+      <p class="round-value" id="countdown">--:--:--</p>
+      <p class="round-note">Next round opens straight after</p>
+    </div>
+    <div class="round-cell">
+      <p class="round-label">Prize pot</p>
+      <p class="round-value">$0</p>
+      <p class="round-note">Grows with coin fees while the round runs</p>
+    </div>
+    <div class="round-cell">
+      <p class="round-label">Wallets entered</p>
+      <p class="round-value">0</p>
+      <p class="round-note">Deposit cap $1,000 per wallet</p>
+    </div>
+  </div>
+
+  <div class="lb-tools">
+    <div class="segmented" role="group" aria-label="Sort">
+      <button type="button" class="on">Profit</button>
+      <button type="button">ROI</button>
+      <button type="button">Trades</button>
+    </div>
+    <p class="updated">Sample layout · no round is running yet</p>
+  </div>
+
+  <div class="lb">
+    <div class="lb-head">
+      <span>Rank</span>
+      <span>Wallet</span>
+      <span style="text-align:right">PnL</span>
+      <span style="text-align:right">ROI</span>
+      <span style="text-align:right">Pot share</span>
+    </div>
+
+    <a class="row top" href="#">
+      <span class="rank"><span class="medal m1">1</span></span>
+      <span class="who">
+        <span class="chain" title="Solana">
+          <svg viewBox="0 0 397.7 311.7" fill="currentColor" aria-hidden="true"><path d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7z"/><path d="M64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8z"/><path d="M333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z"/></svg>
+        </span>
+        <span>
+          <span class="addr">7xKq…4mPd</span>
+          <span class="who-sub">Deposited $1,000 · 41 trades</span>
+        </span>
+      </span>
+      <span class="pnl up">+$5,120</span>
+      <span class="roi">+512%</span>
+      <span class="share">50%</span>
+    </a>
+
+    <a class="row top" href="#">
+      <span class="rank"><span class="medal m2">2</span></span>
+      <span class="who">
+        <span class="chain" title="Solana">
+          <svg viewBox="0 0 397.7 311.7" fill="currentColor" aria-hidden="true"><path d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7z"/><path d="M64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8z"/><path d="M333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z"/></svg>
+        </span>
+        <span>
+          <span class="addr">Bn3v…9QtR</span>
+          <span class="who-sub">Deposited $940 · 18 trades</span>
+        </span>
+      </span>
+      <span class="pnl up">+$3,080</span>
+      <span class="roi">+328%</span>
+      <span class="share">30%</span>
+    </a>
+
+    <a class="row top" href="#">
+      <span class="rank"><span class="medal m3">3</span></span>
+      <span class="who">
+        <span class="chain" title="Solana">
+          <svg viewBox="0 0 397.7 311.7" fill="currentColor" aria-hidden="true"><path d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7z"/><path d="M64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8z"/><path d="M333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z"/></svg>
+        </span>
+        <span>
+          <span class="addr">4dLm…Xw72</span>
+          <span class="who-sub">Deposited $1,000 · 63 trades</span>
+        </span>
+      </span>
+      <span class="pnl up">+$2,040</span>
+      <span class="roi">+204%</span>
+      <span class="share">20%</span>
+    </a>
+
+    <a class="row" href="#">
+      <span class="rank">4</span>
+      <span class="who">
+        <span class="chain" title="Solana"><svg viewBox="0 0 397.7 311.7" fill="currentColor" aria-hidden="true"><path d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7z"/><path d="M64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8z"/><path d="M333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z"/></svg></span>
+        <span class="addr">9sPe…Kd18</span>
+      </span>
+      <span class="pnl up">+$1,460</span>
+      <span class="roi">+146%</span>
+      <span class="share">—</span>
+    </a>
+
+    <a class="row" href="#">
+      <span class="rank">5</span>
+      <span class="who">
+        <span class="chain" title="Solana"><svg viewBox="0 0 397.7 311.7" fill="currentColor" aria-hidden="true"><path d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7z"/><path d="M64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8z"/><path d="M333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z"/></svg></span>
+        <span class="addr">2Grt…Vb55</span>
+      </span>
+      <span class="pnl up">+$870</span>
+      <span class="roi">+87%</span>
+      <span class="share">—</span>
+    </a>
+
+    <a class="row" href="#">
+      <span class="rank">6</span>
+      <span class="who">
+        <span class="chain" title="Solana"><svg viewBox="0 0 397.7 311.7" fill="currentColor" aria-hidden="true"><path d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7z"/><path d="M64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8z"/><path d="M333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z"/></svg></span>
+        <span class="addr">Hq8n…Tz04</span>
+      </span>
+      <span class="pnl up">+$410</span>
+      <span class="roi">+41%</span>
+      <span class="share">—</span>
+    </a>
+
+    <a class="row" href="#">
+      <span class="rank">7</span>
+      <span class="who">
+        <span class="chain" title="Solana"><svg viewBox="0 0 397.7 311.7" fill="currentColor" aria-hidden="true"><path d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7z"/><path d="M64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8z"/><path d="M333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z"/></svg></span>
+        <span class="addr">Ck5w…Rn90</span>
+      </span>
+      <span class="pnl down">−$120</span>
+      <span class="roi">−12%</span>
+      <span class="share">—</span>
+    </a>
+
+    <a class="row" href="#">
+      <span class="rank">8</span>
+      <span class="who">
+        <span class="chain" title="Solana"><svg viewBox="0 0 397.7 311.7" fill="currentColor" aria-hidden="true"><path d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7z"/><path d="M64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8z"/><path d="M333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z"/></svg></span>
+        <span class="addr">Ev6y…Ls37</span>
+      </span>
+      <span class="pnl down">−$640</span>
+      <span class="roi">−64%</span>
+      <span class="share">—</span>
+    </a>
+  </div>
+
+  <div class="cta-band">
+    <p>Rounds run midnight to midnight UTC. Registration opens the day before.</p>
+    <a class="pill pill-lg" href="#">Enter Round</a>
+  </div>
+
+  <footer class="site-foot">
+    <span>FirstTX · Round 001</span>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="rules.html">Rules</a>
+      <a href="faq.html">FAQ</a>
+    </nav>
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  var nav = document.getElementById('nav');
+  var toggle = document.getElementById('navToggle');
+  toggle.addEventListener('click', function () {
+    var open = nav.classList.toggle('open');
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+  });
+
+  var out = document.getElementById('countdown');
+  function tick() {
+    var now = new Date();
+    var end = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0);
+    var left = Math.max(0, Math.floor((end - now.getTime()) / 1000));
+    var h = String(Math.floor(left / 3600)).padStart(2, '0');
+    var m = String(Math.floor((left % 3600) / 60)).padStart(2, '0');
+    var s = String(left % 60).padStart(2, '0');
+    out.textContent = h + ':' + m + ':' + s;
+  }
+  tick();
+  setInterval(tick, 1000);
+
+  document.querySelectorAll('.segmented button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('.segmented button').forEach(function (x) { x.classList.remove('on'); });
+      b.classList.add('on');
+    });
+  });
+})();
+</script>
+</body>
+</html>

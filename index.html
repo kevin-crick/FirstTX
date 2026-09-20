@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>FirstTX</title>
+<link rel="icon" type="image/png" href="favicon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap" rel="stylesheet">
@@ -75,11 +76,11 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   position: absolute;
   left: calc(75 * var(--u));
   top: calc(27 * var(--u));
-  width: calc(31.5 * var(--u));
-  height: calc(48.5 * var(--u));
+  width: calc(52 * var(--u));
+  height: calc(52 * var(--u));
   display: block;
 }
-.brand svg { width: 100%; height: 100%; display: block; }
+.brand img { width: 100%; height: 100%; display: block; object-fit: contain; }
 
 .links {
   position: absolute;
@@ -267,7 +268,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
     padding: calc(22 * var(--m)) calc(24 * var(--m));
     z-index: 30;
   }
-  .brand { position: static; width: calc(26 * var(--m)); height: calc(40 * var(--m)); }
+  .brand { position: static; width: calc(44 * var(--m)); height: calc(44 * var(--m)); }
   .links, .pill-nav { display: none; }
 
   .burger {
@@ -446,35 +447,15 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
   </div>
 
   <header class="topbar">
-    <a class="brand" href="#" aria-label="Home">
-      <svg viewBox="0 0 31.5 48.5" aria-hidden="true">
-        <defs>
-          <linearGradient id="bg1" x1="8" y1="0" x2="34.1" y2="28.9" gradientUnits="userSpaceOnUse">
-            <stop offset="0" stop-color="#9e9e9e"/>
-            <stop offset=".28" stop-color="#a6a6a6"/>
-            <stop offset=".34" stop-color="#a3a3a3"/>
-            <stop offset=".40" stop-color="#3a3a3a"/>
-            <stop offset=".55" stop-color="#414141"/>
-            <stop offset=".60" stop-color="#7a7a7a"/>
-            <stop offset=".68" stop-color="#8e8e8e"/>
-            <stop offset=".80" stop-color="#a9a9a9"/>
-            <stop offset=".95" stop-color="#c4c4c4"/>
-            <stop offset="1" stop-color="#cccccc"/>
-          </linearGradient>
-        </defs>
-        <path d="M21.5 0 L21.5 19.5 L31.5 19.5 L31.5 29 L10 48.5 L10 28.5 L0.5 28.5 L0.5 18.5 Z" fill="url(#bg1)"/>
-        <rect x="0.5" y="18.5" width="9" height="10" fill="#fdfdfd"/>
-        <rect x="22" y="19.5" width="9.5" height="9.5" fill="#fdfdfd"/>
-      </svg>
+    <a class="brand" href="/" aria-label="FirstTX home">
+      <img src="logo.png" alt="FirstTX">
     </a>
 
     <nav class="links" aria-label="Primary">
-      <a href="#">Leaderboard</a>
-      <a href="#">Rules</a>
-      <a href="#">FAQ</a>
+      <a href="leaderboard.html">Leaderboard</a>
+      <a href="rules.html">Rules</a>
+      <a href="faq.html">FAQ</a>
     </nav>
-
-    <a class="pill pill-nav" href="#"><span>Enter Round</span></a>
 
     <button class="burger" id="burger" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="menu">
       <i></i><i></i>
@@ -485,13 +466,13 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
     <div class="menu-inner">
       <p class="menu-eyebrow">Menu</p>
       <ul class="menu-list">
-        <li><a href="#">Leaderboard</a></li>
-        <li><a href="#">Rules</a></li>
-        <li><a href="#">FAQ</a></li>
+        <li><a href="leaderboard.html">Leaderboard</a></li>
+        <li><a href="rules.html">Rules</a></li>
+        <li><a href="faq.html">FAQ</a></li>
       </ul>
       <div class="menu-foot">
         <a class="pill" href="#"><span>Enter Round</span></a>
-        <a class="ghost-m" href="#">View Leaderboard</a>
+        <a class="ghost-m" href="leaderboard.html">View Leaderboard</a>
       </div>
     </div>
   </nav>
@@ -504,7 +485,7 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
     </p>
     <div class="actions">
       <a class="pill pill-cta" href="#"><span>Enter Round</span></a>
-      <a class="ghost" href="#">View Leaderboard</a>
+      <a class="ghost" href="leaderboard.html">View Leaderboard</a>
     </div>
   </main>
 

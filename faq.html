@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FAQ · FirstTX</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="pages.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="site-head">
+    <a class="brand" href="index.html" aria-label="FirstTX home"><img src="logo.png" alt="FirstTX"></a>
+    <nav class="nav" id="nav" aria-label="Primary">
+      <a href="leaderboard.html">Leaderboard</a>
+      <a href="rules.html">Rules</a>
+      <a class="on" href="faq.html">FAQ</a>
+    </nav>
+    <a class="pill head-cta" href="#">Enter Round</a>
+    <button class="nav-toggle" id="navToggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav"><i></i></button>
+  </header>
+
+  <div class="page-head">
+    <p class="eyebrow">Questions</p>
+    <h1>FAQ</h1>
+    <p class="lede">The things people ask before their first round. The full rules live on the rules page.</p>
+  </div>
+
+  <div class="prose faq">
+
+    <details open>
+      <summary>Why does my wallet have to be brand new?</summary>
+      <div class="answer">
+        <p>So every entry starts from the same place. A wallet with history could be carrying tokens bought long ago, and there would be no clean way to tell today's trading apart from last month's.</p>
+        <p>We check that the wallet has no transactions and no balance when you register. From that point on, everything in it happened during the round.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Why do I need two wallets?</summary>
+      <div class="answer">
+        <p>Your competition wallet has to be empty, so it cannot be the wallet holding the coin. The holder wallet proves you hold at least $25 of the coin; the fresh wallet is the one that trades and appears on the leaderboard.</p>
+        <p>Both are connected by signing a message, which costs nothing and creates no transaction.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Do I have to keep holding the coin?</summary>
+      <div class="answer">
+        <p>No. You need the $25 at the snapshot taken when registration opens. Once you are in, you can sell and stay in the round.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>What if I deposit less than $1,000?</summary>
+      <div class="answer">
+        <p>That's allowed. $1,000 is a ceiling, not a requirement. Rankings go by dollars made, so a smaller deposit usually makes the top three harder to reach.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Can I add more money later?</summary>
+      <div class="answer">
+        <p>No. One deposit, during the first hour. Anything arriving afterwards means disqualification, and so does sending funds out of the wallet. Swaps are the only moves allowed.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Someone sent random tokens to my wallet. Am I out?</summary>
+      <div class="answer">
+        <p>No. Anyone can send tokens to any address, so unsolicited airdrops and spam are ignored. They do not count towards your score and they do not disqualify you.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>How is my PnL worked out?</summary>
+      <div class="answer">
+        <p>Your wallet's current value minus your opening deposit, in US dollars, refreshed every 5 minutes.</p>
+        <p>Coins you still hold are valued at what they would really sell for rather than the chart price, so an illiquid bag counts for close to nothing. At the end of the round only cash counts, so close your positions before the clock runs out.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>How is the pot split?</summary>
+      <div class="answer">
+        <p>Between the top three, in proportion to their profit. Profits of $5,000, $3,000 and $2,000 would split it 50%, 30% and 20%.</p>
+        <p>Only wallets in profit are paid, and if nobody ends up in profit the pot rolls into the next round.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>When do I get paid?</summary>
+      <div class="answer">
+        <p>After the round ends, the top three wallets are reviewed by hand and then the pot is sent on-chain. Every payout transaction is posted publicly.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>What gets someone disqualified?</summary>
+      <div class="answer">
+        <p>Depositing more than $1,000, adding money mid-round, withdrawing, or manufacturing profit — moving value in through trades with your own wallets, or wash trading a token you control. Running many entries from one holder bag counts too.</p>
+        <p>Because only the top three are reviewed, a disqualification moves the next wallet up.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>Is there an entry fee?</summary>
+      <div class="answer">
+        <p>No. You hold $25 of the coin to qualify, and it stays yours. Nothing is paid to enter.</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>When does the next round start?</summary>
+      <div class="answer">
+        <p>Rounds run midnight to midnight UTC, back to back. Registration for the next round opens at midday the day before.</p>
+      </div>
+    </details>
+
+  </div>
+
+  <div class="cta-band">
+    <p>Still deciding? Watch a round play out first.</p>
+    <a class="pill pill-lg" href="leaderboard.html">View Leaderboard</a>
+  </div>
+
+  <footer class="site-foot">
+    <span>FirstTX</span>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="leaderboard.html">Leaderboard</a>
+      <a href="rules.html">Rules</a>
+    </nav>
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  var nav = document.getElementById('nav');
+  var toggle = document.getElementById('navToggle');
+  toggle.addEventListener('click', function () {
+    var open = nav.classList.toggle('open');
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+  });
+})();
+</script>
+</body>
+</html>

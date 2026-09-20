@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rules · FirstTX</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="pages.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="site-head">
+    <a class="brand" href="index.html" aria-label="FirstTX home"><img src="logo.png" alt="FirstTX"></a>
+    <nav class="nav" id="nav" aria-label="Primary">
+      <a href="leaderboard.html">Leaderboard</a>
+      <a class="on" href="rules.html">Rules</a>
+      <a href="faq.html">FAQ</a>
+    </nav>
+    <a class="pill head-cta" href="#">Enter Round</a>
+    <button class="nav-toggle" id="navToggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav"><i></i></button>
+  </header>
+
+  <div class="page-head">
+    <p class="eyebrow">How it works</p>
+    <h1>Rules</h1>
+    <p class="lede">One round a day. Everyone starts with a clean wallet, the same deposit ceiling and the same 24 hours.</p>
+  </div>
+
+  <div class="prose">
+
+    <section>
+      <h2>Entering</h2>
+      <div class="steps">
+        <div class="step">
+          <h3>Hold the coin</h3>
+          <p>Your holder wallet needs at least $25 of the FirstTX coin at the snapshot taken when registration opens. One entry per holder wallet, per round. You can sell it afterwards and stay in the race.</p>
+        </div>
+        <div class="step">
+          <h3>Bring a clean wallet</h3>
+          <p>Your competition wallet must have no on-chain history: no transactions, no balance. You prove both wallets are yours by signing a message, which is free and leaves the new wallet untouched.</p>
+        </div>
+        <div class="step">
+          <h3>Fund it once</h3>
+          <p>Send up to $1,000 during the deposit window in the first hour of the round. That deposit is your starting balance, and everything is measured against it.</p>
+        </div>
+        <div class="step">
+          <h3>Trade</h3>
+          <p>Trade however you like for the rest of the 24 hours. The leaderboard picks up your trades and refreshes every 5 minutes.</p>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>The round</h2>
+      <div class="timeline">
+        <div class="tl"><span class="t">12:00 UTC (day before)</span><span class="d">Registration opens and the holder snapshot is taken.</span></div>
+        <div class="tl"><span class="t">00:00 UTC</span><span class="d">Round starts. The deposit window opens.</span></div>
+        <div class="tl"><span class="t">01:00 UTC</span><span class="d">Deposit window and registration close. The field is locked.</span></div>
+        <div class="tl"><span class="t">01:00 – 24:00</span><span class="d">Trading. The leaderboard refreshes every 5 minutes.</span></div>
+        <div class="tl"><span class="t">24:00 UTC</span><span class="d">Round ends and final scores are frozen.</span></div>
+        <div class="tl"><span class="t">After the round</span><span class="d">The top three wallets are reviewed, then the pot is paid on-chain.</span></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>While you trade</h2>
+      <ul>
+        <li><strong>One deposit only.</strong> Money arriving after the deposit window closes means disqualification.</li>
+        <li><strong>No withdrawals.</strong> Sending funds or tokens out of the competition wallet means disqualification. Swaps are the only moves that count.</li>
+        <li><strong>Unwanted tokens are ignored.</strong> Anyone can send junk to any wallet, so airdrops and spam tokens are left out of your score.</li>
+        <li><strong>Trade whatever you want.</strong> No restrictions on which coins you trade or how often.</li>
+      </ul>
+    </section>
+
+    <section>
+      <h2>Scoring</h2>
+      <p><strong>PnL is your wallet's value minus your starting deposit</strong>, in US dollars. Rankings are by dollars made, not percentage, so the deposit cap keeps everyone on the same footing.</p>
+      <p>Coins you are still holding are valued at what they would actually sell for, not at the chart price. A bag nobody will buy is worth close to nothing, however good the chart looks.</p>
+      <p>When the clock hits zero, only cash counts. Close your positions before the round ends, or whatever is left counts as zero.</p>
+    </section>
+
+    <section>
+      <h2>The pot</h2>
+      <p>The pot is a share of the coin's trading fees and grows while the round runs. It is <strong>split between the top three wallets in proportion to their profit</strong>, so the biggest winner takes the biggest piece.</p>
+      <p>For example, profits of $5,000, $3,000 and $2,000 split the pot 50%, 30% and 20%.</p>
+      <p>Only wallets in profit are paid. If two of the top three end the round down, the one in profit takes the whole pot. If nobody finishes in profit, the pot rolls into the next round.</p>
+      <p>Payouts are sent on-chain and every payout transaction is posted publicly.</p>
+    </section>
+
+    <section>
+      <h2>Fair play</h2>
+      <p><strong>The top three wallets are checked by hand before any pot is paid.</strong> We look at the opening deposit, where the money came from and the trades behind the score.</p>
+      <p>Anything that turns a deposit or a transfer into fake profit is disqualified: extra funding, moving value in through trades with your own wallets, or wash trading a token you control. A disqualified wallet is removed from the round and the next wallet moves up.</p>
+      <p>Entering many wallets from one holder bag is likewise grounds for removal. Decisions are made by us and the review happens before payouts are sent.</p>
+    </section>
+
+  </div>
+
+  <div class="cta-band">
+    <p>Read the questions people ask most, or watch the current round.</p>
+    <a class="pill pill-lg" href="leaderboard.html">View Leaderboard</a>
+  </div>
+
+  <footer class="site-foot">
+    <span>FirstTX</span>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="leaderboard.html">Leaderboard</a>
+      <a href="faq.html">FAQ</a>
+    </nav>
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  var nav = document.getElementById('nav');
+  var toggle = document.getElementById('navToggle');
+  toggle.addEventListener('click', function () {
+    var open = nav.classList.toggle('open');
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+  });
+})();
+</script>
+</body>
+</html>
