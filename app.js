@@ -2,12 +2,12 @@
    base58 encoder used when a wallet signs the registration message. */
 
 window.FIRSTTX = (function () {
-  /* Point this at your backend. Localhost while testing; your own domain
-     once the server is deployed. */
+  /* The backend. Localhost while testing on your own machine, the Railway
+     service everywhere else. */
   const API_BASE =
     location.hostname === 'localhost' || location.hostname === '127.0.0.1'
       ? 'http://localhost:8787'
-      : 'https://api.firsttx.com';
+      : 'https://firsttx-production.up.railway.app';
 
   const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
 
