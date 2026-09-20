@@ -164,9 +164,25 @@ check('a round is open for registration', Boolean(round), round ? `round ${round
 
 {
   const bad = await buildRegistration({ round });
-  bad.compSignature = bad.holderSignature; // wrong signature for that wallet
+  bad.holderSignature = sign(newWallet().privateKey, 'unrelated message'); // not the holder's
   const res = await post('/api/register', bad);
-  check('bad signature is refused', refusedBecause(res, 'signature'), res.body.error);
+  check('bad holder signature is refused', refusedBecause(res, 'signature'), res.body.error);
+}
+
+{
+  /* The competition wallet is pasted in, so no signature is required. */
+  const payload = await buildRegistration({ round });
+  delete payload.compSignature;
+  const res = await post('/api/register', payload);
+  check('pasted competition wallet is accepted without signing', res.status === 201, res.body.error || 'entry created');
+  check('entry records that it was not signed', res.body?.compSigned === false, 'compSigned=' + res.body?.compSigned);
+}
+
+{
+  const payload = await buildRegistration({ round });
+  payload.compWallet = 'not-a-real-address';
+  const res = await post('/api/register', payload);
+  check('a junk address is refused', refusedBecause(res, 'valid solana address'), res.body.error);
 }
 
 {

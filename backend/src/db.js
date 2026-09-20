@@ -116,6 +116,17 @@ CREATE TABLE IF NOT EXISTS payouts (
 );
 `);
 
+/* Small forward migrations. SQLite has no "add column if missing", so check. */
+function addColumnIfMissing(table, column, definition) {
+  const columns = db.prepare(`PRAGMA table_info(${table})`).all();
+  if (columns.some((c) => c.name === column)) return;
+  db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+}
+
+/* Entries made by pasting an address are not signature-proved; the manual
+   review covers them. */
+addColumnIfMissing('entries', 'comp_signed', 'INTEGER NOT NULL DEFAULT 0');
+
 export const now = () => Math.floor(Date.now() / 1000);
 
 export const queryAll = (sql, ...params) => db.prepare(sql).all(...params);

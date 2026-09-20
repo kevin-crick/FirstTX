@@ -43,9 +43,11 @@
 
         <div class="step" id="step2">
           <h3>Competition wallet</h3>
-          <p>Switch to a brand-new wallet in Phantom, one with no transactions and no balance, then connect and sign again.</p>
+          <p>Make a brand-new wallet, one with no transactions and no balance, and paste its address here. No signing, no connecting.</p>
+          <input class="addr-input" id="compInput" type="text" spellcheck="false" autocomplete="off"
+                 placeholder="Paste the new wallet address" disabled>
           <p class="state" id="state2">Waiting for the holder wallet</p>
-          <button class="pill pill-lg" id="btn2" type="button" disabled>Switch wallet and sign</button>
+          <button class="pill pill-lg" id="btn2" type="button" disabled>Use this wallet</button>
         </div>
 
         <div class="step" id="step3">
@@ -137,26 +139,46 @@
       holder = await connectAndSign('holder');
       setState('state1', 'Signed as ' + F.shortAddr(holder.address), 'ok');
       el('btn2').disabled = false;
-      setState('state2', 'Switch to your fresh wallet in Phantom, then sign');
+      el('compInput').disabled = false;
+      setState('state2', 'Paste the address of your brand-new wallet');
     } catch (err) {
       setState('state1', err.message, 'bad');
     }
   });
 
-  el('btn2').addEventListener('click', async function () {
-    try {
-      setState('state2', 'Check Phantom…');
-      comp = await connectAndSign('competition');
-      if (comp.address === holder.address) {
-        comp = null;
-        setState('state2', 'That is the same wallet. Switch accounts in Phantom and sign again.', 'bad');
-        return;
-      }
-      setState('state2', 'Signed as ' + F.shortAddr(comp.address), 'ok');
-      el('btn3').disabled = false;
-      setState('state3', 'Ready to enter');
-    } catch (err) {
-      setState('state2', err.message, 'bad');
+  /* Solana addresses are base58, 32 bytes — 32 to 44 characters, no 0 O I l. */
+  function looksLikeAddress(value) {
+    return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(value);
+  }
+
+  el('btn2').addEventListener('click', function () {
+    var value = el('compInput').value.trim();
+
+    if (!value) {
+      setState('state2', 'Paste your new wallet address first.', 'bad');
+      return;
+    }
+    if (!looksLikeAddress(value)) {
+      setState('state2', 'That does not look like a Solana address. Copy it again from your wallet.', 'bad');
+      return;
+    }
+    if (holder && value === holder.address) {
+      setState('state2', 'That is your holder wallet. The competition wallet has to be a different, empty one.', 'bad');
+      return;
+    }
+
+    comp = { address: value };
+    setState('state2', 'Using ' + F.shortAddr(value), 'ok');
+    el('btn3').disabled = false;
+    setState('state3', 'Ready to enter');
+  });
+
+  el('compInput').addEventListener('input', function () {
+    if (comp) {
+      comp = null;
+      el('btn3').disabled = true;
+      setState('state2', 'Press "Use this wallet" to confirm the new address.');
+      setState('state3', 'Waiting for your wallet address');
     }
   });
 
@@ -172,7 +194,6 @@
           holderWallet: holder.address,
           holderSignature: holder.signature,
           compWallet: comp.address,
-          compSignature: comp.signature,
         }),
       });
       setState('state3', 'You are in. Wallet ' + F.shortAddr(comp.address) + ' is on the leaderboard.', 'ok');
@@ -189,6 +210,7 @@
         comp = null;
         el('btn2').disabled = true;
         el('btn3').disabled = true;
+        el('compInput').disabled = true;
         setState('state1', 'Sign again to retry');
         setState('state2', 'Waiting for the holder wallet');
       } catch (e) {}

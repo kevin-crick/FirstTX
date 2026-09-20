@@ -210,6 +210,7 @@ export async function handleRequest(req, res) {
             address: entry.comp_wallet,
             holderWallet: entry.holder_wallet,
             holdVerified: Boolean(entry.hold_verified),
+            compSigned: Boolean(entry.comp_signed),
             holdUsd: entry.hold_usd,
             deposit: entry.deposit_usd,
             firstFunder: entry.first_funder,

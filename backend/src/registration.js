@@ -63,8 +63,15 @@ export async function register(input) {
   if (!verifySignature(holderWallet, holderMessage, String(input.holderSignature || ''))) {
     throw new RegistrationError('holder wallet signature did not verify');
   }
-  if (!verifySignature(compWallet, compMessage, String(input.compSignature || ''))) {
-    throw new RegistrationError('competition wallet signature did not verify');
+  /* The competition wallet may simply be pasted in. A signature is accepted
+     when the wallet is connected, and recorded, but it is not required: the
+     wallet must be empty anyway, and the top three are reviewed by hand. */
+  let compSigned = 0;
+  if (input.compSignature) {
+    if (!verifySignature(compWallet, compMessage, String(input.compSignature))) {
+      throw new RegistrationError('competition wallet signature did not verify');
+    }
+    compSigned = 1;
   }
 
   /* 2. Not already entered. */
@@ -86,14 +93,15 @@ export async function register(input) {
   if (!hold.ok) throw new RegistrationError(hold.reason);
 
   run(
-    `INSERT INTO entries (round_id, comp_wallet, holder_wallet, registered_at, status, hold_verified, hold_usd)
-     VALUES (?, ?, ?, ?, 'active', ?, ?)`,
+    `INSERT INTO entries (round_id, comp_wallet, holder_wallet, registered_at, status, hold_verified, hold_usd, comp_signed)
+     VALUES (?, ?, ?, ?, 'active', ?, ?, ?)`,
     round.id,
     compWallet,
     holderWallet,
     now(),
     hold.verified ? 1 : 0,
     hold.usd,
+    compSigned,
   );
 
   const entry = queryOne('SELECT * FROM entries WHERE round_id = ? AND comp_wallet = ?', round.id, compWallet);
@@ -101,6 +109,7 @@ export async function register(input) {
     entryId: entry.id,
     round: { number: round.number, opensAt: round.opens_at, depositClosesAt: round.deposit_closes_at, endsAt: round.ends_at },
     holdVerified: Boolean(hold.verified),
+    compSigned: Boolean(compSigned),
     holdUsd: hold.usd,
     depositCapUsd: config.depositCapUsd,
   };

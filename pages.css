@@ -418,6 +418,26 @@ h1 {
   margin: 10px 0 14px;
   min-height: 20px;
 }
+.addr-input {
+  display: block;
+  width: 100%;
+  max-width: 460px;
+  margin: 14px 0 0;
+  height: 46px;
+  padding: 0 16px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  color: var(--ink);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 14px;
+  outline: none;
+  transition: border-color .2s var(--ease), background .2s var(--ease);
+}
+.addr-input::placeholder { color: var(--dim); font-family: 'Manrope', sans-serif; }
+.addr-input:focus { border-color: rgba(255,255,255,.34); background: rgba(255,255,255,.06); }
+.addr-input:disabled { opacity: .4; cursor: not-allowed; }
+
 .state.ok { color: var(--up); }
 .state.bad { color: var(--down); }
 .step .pill { width: auto; }
