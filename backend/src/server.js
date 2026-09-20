@@ -31,10 +31,15 @@ async function tick() {
     /* Nothing to score until you start the round. */
     if (phase === 'registration') return;
 
-    if (phase === 'deposit-window' || phase === 'trading') {
+    if (phase === 'trading') {
       const results = await indexRound(round);
       const errors = results.filter((r) => r.error);
-      log(`indexed round ${round.number}: ${results.length} wallets${errors.length ? `, ${errors.length} errors` : ''}`);
+      const scored = results.filter((r) => !r.skipped && !r.error).length;
+      const quiet = results.filter((r) => r.skipped).length;
+      log(
+        `round ${round.number}: ${results.length} wallets — ${scored} rescored, ${quiet} unchanged` +
+          (errors.length ? `, ${errors.length} errors` : ''),
+      );
     }
 
     /* First pass after the clock runs out freezes the result. */

@@ -127,6 +127,11 @@ function addColumnIfMissing(table, column, definition) {
    review covers them. */
 addColumnIfMissing('entries', 'comp_signed', 'INTEGER NOT NULL DEFAULT 0');
 
+/* Latecomers get their own deposit window, counted from when they entered.
+   0 means "use the round's window", which is the case for anyone who entered
+   before the round started. */
+addColumnIfMissing('entries', 'deposit_deadline', 'INTEGER NOT NULL DEFAULT 0');
+
 export const now = () => Math.floor(Date.now() / 1000);
 
 export const queryAll = (sql, ...params) => db.prepare(sql).all(...params);

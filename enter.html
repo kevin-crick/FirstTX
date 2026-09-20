@@ -77,7 +77,8 @@
     <section>
       <h2>After you enter</h2>
       <ul>
-        <li>Send <strong>up to <span id="cap">$1,000</span></strong> to your competition wallet during the deposit window. That is your starting balance.</li>
+        <li>Send <strong>up to <span id="cap">$1,000</span></strong> to your competition wallet whenever you like. The first money in is your starting balance.</li>
+        <li>You can join a round that is already running. You keep whatever time is left on the clock.</li>
         <li>No further deposits, and nothing may leave the wallet. Swaps only.</li>
         <li>Close your positions before the clock runs out: only cash counts at the end.</li>
       </ul>
@@ -127,8 +128,8 @@
     el('enteredWallet').href = 'wallet.html?address=' + encodeURIComponent(entry.wallet);
     el('enteredNote').textContent = opensAt && Date.now() / 1000 < opensAt
       ? 'Round ' + String(roundNumber).padStart(3, '0') + ' has not started yet. Fund this wallet with up to ' +
-        F.money(1000) + ' once the deposit window opens, and it appears on the leaderboard then.'
-      : 'Round ' + String(roundNumber).padStart(3, '0') + ' is running. Fund this wallet during the deposit window if you have not already.';
+        F.money(1000) + ' whenever you like. It appears on the leaderboard once the round starts.'
+      : 'Round ' + String(roundNumber).padStart(3, '0') + ' is running. Fund this wallet if you have not already.';
     el('alreadyIn').hidden = false;
     document.querySelector('.steps').hidden = true;
   }
@@ -242,7 +243,7 @@
       showEntered({ wallet: comp.address }, round.number, round.opensAt);
       setState('state3', 'You are in.', 'ok');
       el('result').innerHTML =
-        'Fund it with up to ' + F.money(result.depositCapUsd) + ' during the deposit window. ' +
+        'Fund it with up to ' + F.money(result.depositCapUsd) + '. The first money in is your starting balance. ' +
         '<a href="leaderboard.html">Open the leaderboard</a>.';
     } catch (err) {
       setState('state3', err.message, 'bad');

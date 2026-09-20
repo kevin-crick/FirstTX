@@ -36,9 +36,11 @@ export const config = {
 
   minHoldUsd: num('MIN_HOLD_USD', 25),
   depositCapUsd: num('DEPOSIT_CAP_USD', 1000),
-  roundStartHour: num('ROUND_START_HOUR', 0),
-  depositWindowHours: num('DEPOSIT_WINDOW_HOURS', 1),
-  registrationLeadHours: num('REGISTRATION_LEAD_HOURS', 12),
+  /* There is no deposit window. The first money into a wallet is its starting
+     balance, and top-ups afterwards are flagged for the manual review.
+     Funding split across a few transactions within this many seconds counts
+     as one deposit. */
+  depositGraceSeconds: num('DEPOSIT_GRACE_SECONDS', 900),
 
   port: num('PORT', 8787),
   /* Browsers send an origin with no trailing slash and no path, so accept
@@ -49,7 +51,13 @@ export const config = {
     .filter(Boolean),
   adminToken: process.env.ADMIN_TOKEN || '',
 
-  indexIntervalSeconds: num('INDEX_INTERVAL_SECONDS', 300),
+  /* How often wallets are checked for new activity. */
+  indexIntervalSeconds: num('INDEX_INTERVAL_SECONDS', 60),
+  /* A wallet with no new transactions is still re-priced this often, so a
+     position moving in the market updates even when nobody is trading.
+     Checking for activity costs one call; re-pricing costs several, so these
+     are deliberately different. */
+  revalueIntervalSeconds: num('REVALUE_INTERVAL_SECONDS', 300),
   /* Write-endpoint rate limit per IP per minute. Raise it only for testing. */
   rateLimitPerMinute: num('RATE_LIMIT_PER_MINUTE', 10),
 

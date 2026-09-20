@@ -164,7 +164,7 @@
 
       el('value').textContent = F.money(w.value);
       el('rank').textContent = w.rank ? '#' + w.rank : '—';
-      el('rankNote').textContent = w.rank ? 'Final placing' : 'Live ranking is on the leaderboard';
+      el('rankNote').textContent = w.rank ? 'Final placing' : 'Updated every minute';
 
       el('deposit').textContent = w.deposit ? F.money(w.deposit) : '—';
       el('trades').textContent = w.trades != null ? w.trades : '—';
@@ -185,7 +185,7 @@
   }
 
   load();
-  setInterval(load, 60000);
+  setInterval(load, 30000);
 
   var nav = el('nav');
   var toggle = el('navToggle');

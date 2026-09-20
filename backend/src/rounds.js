@@ -58,9 +58,8 @@ export function startRound(hours = 24) {
 
   const startedAt = now();
   run(
-    `UPDATE rounds SET status = 'live', opens_at = ?, deposit_closes_at = ?, ends_at = ? WHERE id = ?`,
+    `UPDATE rounds SET status = 'live', opens_at = ?, deposit_closes_at = 0, ends_at = ? WHERE id = ?`,
     startedAt,
-    startedAt + Math.round(config.depositWindowHours * 3600),
     startedAt + Math.round(hours * 3600),
     round.id,
   );
@@ -92,12 +91,16 @@ export function currentRound() {
   );
 }
 
-/** The round accepting entries: one open for registration, or a live round still inside its deposit window. */
+/**
+ * The round accepting entries: one open for registration, or a round that is
+ * still running. Latecomers are welcome — they simply have less of the 24
+ * hours left, and their own deposit window starts when they enter.
+ */
 export function registrationRound() {
   const open = queryOne(`SELECT * FROM rounds WHERE status = 'registration' ORDER BY number DESC LIMIT 1`);
   if (open) return open;
   return queryOne(
-    `SELECT * FROM rounds WHERE status = 'live' AND deposit_closes_at > ? ORDER BY number DESC LIMIT 1`,
+    `SELECT * FROM rounds WHERE status = 'live' AND ends_at > ? ORDER BY number DESC LIMIT 1`,
     now(),
   );
 }
@@ -108,9 +111,7 @@ export function phaseOf(round, nowTs = now()) {
   if (round.status === 'settled') return 'settled';
   if (round.status === 'review') return 'review';
   if (round.status === 'live') {
-    /* The end of the round wins: ending early closes the deposit window too. */
     if (round.ends_at > 0 && nowTs >= round.ends_at) return 'review';
-    if (nowTs < round.deposit_closes_at) return 'deposit-window';
     return 'trading';
   }
   return round.status;

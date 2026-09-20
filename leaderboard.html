@@ -28,7 +28,7 @@
   <div class="page-head">
     <p class="eyebrow" id="roundLabel">Round</p>
     <h1>Leaderboard</h1>
-    <p class="lede">Every wallet starts the round empty. Profit and loss is measured against each wallet's opening deposit and refreshes every 5 minutes. Click any wallet to open it on Solscan.</p>
+    <p class="lede">Every wallet starts the round empty. Profit and loss is measured against each wallet's opening deposit and updates every minute. Click any wallet to open it on Solscan.</p>
   </div>
 
   <div class="round-bar">
@@ -98,7 +98,7 @@
 (function () {
   var F = window.FIRSTTX;
   var PAGE_SIZE = 20;
-  var REFRESH_MS = 60000;
+  var REFRESH_MS = 30000;
 
   var entries = [];
   var round = null;
@@ -165,7 +165,6 @@
   var PHASE_TEXT = {
     upcoming: 'Registration has not opened yet',
     registration: 'Entries open, not started',
-    'deposit-window': 'Deposit window is open',
     trading: 'Live',
     review: 'Round over, top three under review',
     settled: 'Settled',

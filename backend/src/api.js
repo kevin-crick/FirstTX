@@ -331,6 +331,37 @@ export async function handleRequest(req, res) {
         return json(res, 200, { ok: true, round: roundPayload(result.round) });
       }
 
+      /* Wipes every round, entry, score and flag, then opens a fresh round 1.
+         For clearing out testing before launch. Requires the exact confirm
+         word so it cannot happen by accident. */
+      if (req.method === 'POST' && path === '/api/admin/reset') {
+        const body = await readJsonBody(req);
+        if (body.confirm !== 'WIPE') {
+          return json(res, 400, { error: 'send {"confirm":"WIPE"} to confirm — this deletes every round and entry' });
+        }
+        const before = queryOne('SELECT COUNT(*) AS rounds FROM rounds')?.rounds ?? 0;
+        const entries = queryOne('SELECT COUNT(*) AS n FROM entries')?.n ?? 0;
+
+        run('DELETE FROM payouts');
+        run('DELETE FROM valuations');
+        run('DELETE FROM transfers');
+        run('DELETE FROM flags');
+        run('DELETE FROM entries');
+        run('DELETE FROM snapshot_holders');
+        run('DELETE FROM rounds');
+        run("DELETE FROM sqlite_sequence WHERE name IN ('rounds','entries')");
+        run('DELETE FROM nonces');
+
+        const created = createRound();
+        const snapshot = created.ok ? await takeSnapshot(created.round.id) : null;
+        return json(res, 200, {
+          ok: true,
+          deleted: { rounds: before, entries },
+          round: created.ok ? roundPayload(created.round) : null,
+          snapshot,
+        });
+      }
+
       if (req.method === 'GET' && path === '/api/admin/rounds/list') {
         return json(res, 200, {
           rounds: queryAll(

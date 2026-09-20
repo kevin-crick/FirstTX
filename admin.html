@@ -86,6 +86,16 @@
       <p class="state" id="reviewState">—</p>
     </section>
 
+    <section class="admin-block">
+      <h2>Start over</h2>
+      <p class="admin-help">Deletes every round, entry and score, then opens a fresh round 001. For clearing out testing before launch. This cannot be undone.</p>
+      <div class="admin-actions">
+        <input class="addr-input" id="wipeInput" type="text" placeholder="Type WIPE to confirm" style="max-width:220px">
+        <button class="ghost-link" id="btnWipe" type="button">Delete everything</button>
+      </div>
+      <p class="state" id="wipeState"></p>
+    </section>
+
   </div>
 
   <footer class="site-foot">
@@ -121,7 +131,6 @@
 
   var PHASE = {
     registration: 'Registration open, not started',
-    'deposit-window': 'Running, deposit window open',
     trading: 'Running',
     review: 'Finished, awaiting review',
     settled: 'Settled',
@@ -267,7 +276,7 @@
   });
 
   el('btnStart').addEventListener('click', async function () {
-    if (!confirm('Start the round now? The 24 hour clock begins immediately and the deposit window opens.')) return;
+    if (!confirm('Start the round now? The 24 hour clock begins immediately.')) return;
     setState('controlState', 'Starting…');
     try {
       var r = await api('/api/admin/round/start', { method: 'POST', body: JSON.stringify({ hours: 24 }) });
@@ -302,6 +311,22 @@
       refresh();
     } catch (err) {
       setState('potState', err.message, 'bad');
+    }
+  });
+
+  el('btnWipe').addEventListener('click', async function () {
+    if (el('wipeInput').value.trim() !== 'WIPE') {
+      setState('wipeState', 'Type WIPE in the box to confirm.', 'bad');
+      return;
+    }
+    if (!confirm('Delete every round, entry and score, and start again at round 001? This cannot be undone.')) return;
+    try {
+      var r = await api('/api/admin/reset', { method: 'POST', body: JSON.stringify({ confirm: 'WIPE' }) });
+      el('wipeInput').value = '';
+      setState('wipeState', 'Cleared ' + r.deleted.rounds + ' round(s) and ' + r.deleted.entries + ' entries. Round 001 is now open for registration.', 'ok');
+      refresh();
+    } catch (err) {
+      setState('wipeState', err.message, 'bad');
     }
   });
 

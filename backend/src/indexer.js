@@ -127,6 +127,13 @@ export async function indexEntry(entry, round) {
   /* 1. New transactions, oldest first. */
   const signatures = (await getSignaturesSince(wallet, entry.last_signature, MAX_TX_PER_PASS)).reverse();
 
+  /* Nothing new and priced recently? Stop here. That one signature check is
+     the whole cost of a quiet minute, which is what makes minute-by-minute
+     scoring affordable. */
+  if (!signatures.length && entry.indexed_at && now() - entry.indexed_at < config.revalueIntervalSeconds) {
+    return { entryId: entry.id, skipped: true, pnl: entry.pnl_usd, value: entry.value_usd, trades: entry.trades };
+  }
+
   let deposits = entry.deposit_usd;
   let depositSol = entry.deposit_sol;
   let trades = entry.trades;
@@ -154,7 +161,6 @@ export async function indexEntry(entry, round) {
       const mints = await getPrices([move.mint || SOL_MINT]);
       const usd = (mints.get(move.mint || SOL_MINT) ?? 0) * move.amount;
 
-      const isDepositWindow = blockTime <= round.deposit_closes_at;
       const isFunding = move.mint === SOL_MINT || CASH_MINTS.has(move.mint);
 
       run(
@@ -172,15 +178,20 @@ export async function indexEntry(entry, round) {
       if (!isFunding) continue; // unsolicited token airdrops are ignored
       if (usd < config.dustTransferUsd) continue; // rent top-ups and dust
 
-      if (isDepositWindow) {
+      /* No deposit window: the first money in is the starting balance,
+         whenever it arrives. Anything topped up afterwards is flagged for
+         the end-of-round review rather than being scored as profit. */
+      if (!firstFunder && !firstDepositAt) {
         deposits += usd;
         if (move.mint === SOL_MINT) depositSol += move.amount;
-        if (!firstFunder) {
-          firstFunder = move.counterparty ?? null;
-          firstDepositAt = blockTime;
-        }
+        firstFunder = move.counterparty ?? null;
+        firstDepositAt = blockTime;
+      } else if (firstDepositAt && blockTime - firstDepositAt <= config.depositGraceSeconds) {
+        /* Funding sent in a few transactions back to back is one deposit. */
+        deposits += usd;
+        if (move.mint === SOL_MINT) depositSol += move.amount;
       } else {
-        addFlag(entry.id, 'extra-deposit', `$${usd.toFixed(2)} arrived after the deposit window closed`, item.signature);
+        addFlag(entry.id, 'extra-deposit', `$${usd.toFixed(2)} was added after the opening deposit`, item.signature);
       }
     }
 

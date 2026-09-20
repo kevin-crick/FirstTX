@@ -50,8 +50,8 @@ export async function register(input) {
   const round = registrationRound();
   if (!round) throw new RegistrationError('registration is closed right now', 409);
   const phase = phaseOf(round);
-  if (phase !== 'registration' && phase !== 'deposit-window') {
-    throw new RegistrationError('registration is closed for this round', 409);
+  if (phase === 'review' || phase === 'settled' || phase === 'none') {
+    throw new RegistrationError('that round has finished', 409);
   }
 
   const nonceCheck = consumeNonce(nonce);
@@ -92,9 +92,13 @@ export async function register(input) {
   const hold = await checkHolding(round, holderWallet);
   if (!hold.ok) throw new RegistrationError(hold.reason);
 
+  /* Entering mid-round is allowed, and there is no funding deadline: fund the
+     wallet whenever you like. The first money in becomes the starting balance. */
+  const depositDeadline = 0;
+
   run(
-    `INSERT INTO entries (round_id, comp_wallet, holder_wallet, registered_at, status, hold_verified, hold_usd, comp_signed)
-     VALUES (?, ?, ?, ?, 'active', ?, ?, ?)`,
+    `INSERT INTO entries (round_id, comp_wallet, holder_wallet, registered_at, status, hold_verified, hold_usd, comp_signed, deposit_deadline)
+     VALUES (?, ?, ?, ?, 'active', ?, ?, ?, ?)`,
     round.id,
     compWallet,
     holderWallet,
@@ -102,6 +106,7 @@ export async function register(input) {
     hold.verified ? 1 : 0,
     hold.usd,
     compSigned,
+    depositDeadline,
   );
 
   const entry = queryOne('SELECT * FROM entries WHERE round_id = ? AND comp_wallet = ?', round.id, compWallet);
@@ -111,6 +116,7 @@ export async function register(input) {
     holdVerified: Boolean(hold.verified),
     compSigned: Boolean(compSigned),
     holdUsd: hold.usd,
+    depositDeadline: 0,
     depositCapUsd: config.depositCapUsd,
   };
 }

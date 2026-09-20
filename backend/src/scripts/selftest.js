@@ -199,6 +199,20 @@ check('a round is open for registration', Boolean(round), round ? `round ${round
 }
 
 {
+  /* Joining a round that is already running must work, with the latecomer
+     getting their own deposit window. */
+  const info = await getJson('/api/round');
+  if (info.round && info.round.phase === 'trading') {
+    const late = await buildRegistration({ round: info.round });
+    const res = await post('/api/register', late);
+    check('can enter a round already in progress', res.status === 201, res.body.error || 'entry created');
+    check('no funding deadline is imposed', res.body?.depositDeadline === 0, 'depositDeadline=' + res.body?.depositDeadline);
+  } else {
+    console.log('SKIP  mid-round entry — no round is running');
+  }
+}
+
+{
   const board = await getJson('/api/leaderboard');
   check('leaderboard responds', Array.isArray(board.entries), `${board.entries?.length ?? 0} entries`);
   const admin = await fetch(API + '/api/admin/review');
