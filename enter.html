@@ -61,6 +61,19 @@
       <p class="note" id="result"></p>
     </section>
 
+    <section id="alreadyIn" hidden style="border-top:0;padding-top:0">
+      <div class="entered-card">
+        <p class="entered-label">You are entered</p>
+        <p class="entered-addr" id="entered"></p>
+        <p class="entered-note" id="enteredNote"></p>
+        <div class="entered-actions">
+          <a class="pill pill-lg" id="enteredWallet" href="#">Open my wallet page</a>
+          <a class="ghost-link" href="leaderboard.html">View leaderboard</a>
+          <button class="ghost-link" id="enterAnother" type="button">Enter a different wallet</button>
+        </div>
+      </div>
+    </section>
+
     <section>
       <h2>After you enter</h2>
       <ul>
@@ -95,6 +108,35 @@
   var comp = null;
 
   var el = function (id) { return document.getElementById(id); };
+  var STORE_KEY = 'firsttx.entry';
+
+  /* Remember the entry so coming back to this page does not look like the
+     registration was lost. Browser storage can be blocked, so never rely on it. */
+  function remember(entry) {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify(entry)); } catch (e) {}
+  }
+  function recall() {
+    try { return JSON.parse(localStorage.getItem(STORE_KEY) || 'null'); } catch (e) { return null; }
+  }
+  function forget() {
+    try { localStorage.removeItem(STORE_KEY); } catch (e) {}
+  }
+
+  function showEntered(entry, roundNumber, opensAt) {
+    el('entered').textContent = entry.wallet;
+    el('enteredWallet').href = 'wallet.html?address=' + encodeURIComponent(entry.wallet);
+    el('enteredNote').textContent = opensAt && Date.now() / 1000 < opensAt
+      ? 'Round ' + String(roundNumber).padStart(3, '0') + ' has not started yet. Fund this wallet with up to ' +
+        F.money(1000) + ' once the deposit window opens, and it appears on the leaderboard then.'
+      : 'Round ' + String(roundNumber).padStart(3, '0') + ' is running. Fund this wallet during the deposit window if you have not already.';
+    el('alreadyIn').hidden = false;
+    document.querySelector('.steps').hidden = true;
+  }
+
+  function showSteps() {
+    el('alreadyIn').hidden = true;
+    document.querySelector('.steps').hidden = false;
+  }
 
   function setState(id, text, kind) {
     var node = el(id);
@@ -196,7 +238,9 @@
           compWallet: comp.address,
         }),
       });
-      setState('state3', 'You are in. Wallet ' + F.shortAddr(comp.address) + ' is on the leaderboard.', 'ok');
+      remember({ wallet: comp.address, round: round.number, at: Date.now() });
+      showEntered({ wallet: comp.address }, round.number, round.opensAt);
+      setState('state3', 'You are in.', 'ok');
       el('result').innerHTML =
         'Fund it with up to ' + F.money(result.depositCapUsd) + ' during the deposit window. ' +
         '<a href="leaderboard.html">Open the leaderboard</a>.';
@@ -234,12 +278,43 @@
       el('minHold').textContent = F.money(round.minHoldUsd);
       el('cap').textContent = F.money(round.depositCapUsd);
       setState('state1', 'Not connected');
+
+      /* Already entered this round? Confirm with the server, then say so
+         instead of asking for a signature again. */
+      var saved = recall();
+      if (saved && saved.round === round.number) {
+        try {
+          var existing = await F.api('/api/wallet/' + encodeURIComponent(saved.wallet));
+          if (existing && existing.status === 'active') {
+            showEntered(saved, round.number, round.opensAt);
+          } else {
+            forget();
+          }
+        } catch (e) {
+          forget(); // the server does not know it, so let them enter again
+        }
+      }
     } catch (err) {
       el('roundLabel').textContent = 'Cannot reach the server';
       setState('state1', 'Registration is unavailable right now. Try again shortly.', 'bad');
       el('btn1').disabled = true;
     }
   })();
+
+  el('enterAnother').addEventListener('click', function () {
+    forget();
+    holder = null;
+    comp = null;
+    el('compInput').value = '';
+    el('compInput').disabled = true;
+    el('btn2').disabled = true;
+    el('btn3').disabled = true;
+    el('result').textContent = '';
+    setState('state1', 'Not connected');
+    setState('state2', 'Waiting for the holder wallet');
+    setState('state3', 'Waiting for your wallet address');
+    showSteps();
+  });
 
   var nav = el('nav');
   var toggle = el('navToggle');

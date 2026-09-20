@@ -194,7 +194,16 @@
 
   async function load() {
     try {
-      var data = await F.api('/api/leaderboard');
+      /* Show whichever round people are actually in. Entries go to the round
+         that is open for registration, which is tomorrow's until midnight, so
+         a trader who just entered would otherwise see an empty board. */
+      var info = await F.api('/api/round');
+      var target = info.round;
+      if ((!target || !target.walletsEntered) && info.registration && info.registration.walletsEntered) {
+        target = info.registration;
+      }
+
+      var data = await F.api('/api/leaderboard' + (target ? '?round=' + target.number : ''));
       round = data.round;
       entries = (data.entries || []).map(function (e) {
         return {
@@ -208,9 +217,12 @@
       paintRound();
       tick();
       emptyEl.textContent = 'No wallets yet. Entries appear here the moment the round opens.';
-      updatedEl.textContent = entries.length
-        ? 'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        : PHASE_TEXT[round?.phase] || 'Waiting for the next round';
+      var waiting = round && (round.phase === 'registration' || round.phase === 'upcoming');
+      updatedEl.textContent = waiting
+        ? entries.length + (entries.length === 1 ? ' wallet entered, waiting for the round to start' : ' wallets entered, waiting for the round to start')
+        : entries.length
+          ? 'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          : PHASE_TEXT[round?.phase] || 'Waiting for the next round';
       render();
     } catch (err) {
       emptyEl.textContent = 'The leaderboard is not reachable right now. It will appear here once the round is running.';

@@ -418,6 +418,35 @@ h1 {
   margin: 10px 0 14px;
   min-height: 20px;
 }
+.entered-card {
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  padding: 26px 28px;
+  background: rgba(255,255,255,.028);
+}
+.entered-label {
+  font-size: 12px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--up);
+  margin-bottom: 12px;
+}
+.entered-addr {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 17px;
+  color: var(--ink);
+  word-break: break-all;
+}
+.entered-note { margin-top: 10px; font-size: 15px; color: var(--muted); line-height: 1.6; }
+.entered-actions {
+  margin-top: 22px;
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  flex-wrap: wrap;
+}
+.entered-actions .ghost-link { font-size: 15px; padding: 0; }
+
 .addr-input {
   display: block;
   width: 100%;
