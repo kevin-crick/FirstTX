@@ -41,9 +41,11 @@ export const config = {
   registrationLeadHours: num('REGISTRATION_LEAD_HOURS', 12),
 
   port: num('PORT', 8787),
+  /* Browsers send an origin with no trailing slash and no path, so accept
+     whatever shape the value was pasted in and normalise it. */
   allowedOrigins: (process.env.ALLOWED_ORIGINS || 'http://localhost:5173')
     .split(',')
-    .map((s) => s.trim())
+    .map((s) => s.trim().replace(/\/+$/, ''))
     .filter(Boolean),
   adminToken: process.env.ADMIN_TOKEN || '',
 

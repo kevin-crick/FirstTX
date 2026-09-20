@@ -20,7 +20,8 @@ function cors(req, res) {
   const origin = req.headers.origin;
   /* No Origin header means a non-browser caller (curl, a script, a health
      check). The browser-origin allowlist only applies to browsers. */
-  const allowed = !origin || config.allowedOrigins.includes('*') || config.allowedOrigins.includes(origin);
+  const normalized = origin ? origin.replace(/\/+$/, '') : '';
+  const allowed = !origin || config.allowedOrigins.includes('*') || config.allowedOrigins.includes(normalized);
   if (allowed && origin) res.setHeader('access-control-allow-origin', origin);
   res.setHeader('vary', 'origin');
   res.setHeader('access-control-allow-headers', 'content-type, authorization');
