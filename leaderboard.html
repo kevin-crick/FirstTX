@@ -19,6 +19,7 @@
       <a class="on" href="leaderboard.html">Leaderboard</a>
       <a href="rules.html">Rules</a>
       <a href="faq.html">FAQ</a>
+      <a href="https://x.com/tryfirsttx" target="_blank" rel="noopener">X</a>
     </nav>
     <a class="pill head-cta" href="#">Enter Round</a>
     <button class="nav-toggle" id="navToggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav"><i></i></button>
@@ -27,7 +28,7 @@
   <div class="page-head">
     <p class="eyebrow" id="roundLabel">Round 001</p>
     <h1>Leaderboard</h1>
-    <p class="lede">Every wallet starts the round empty. Profit and loss is measured against each wallet's opening deposit and refreshes every 5 minutes.</p>
+    <p class="lede">Every wallet starts the round empty. Profit and loss is measured against each wallet's opening deposit and refreshes every 5 minutes. Click any wallet to open it on Solscan.</p>
   </div>
 
   <div class="round-bar">
@@ -86,6 +87,7 @@
       <a href="index.html">Home</a>
       <a href="rules.html">Rules</a>
       <a href="faq.html">FAQ</a>
+      <a href="https://x.com/tryfirsttx" target="_blank" rel="noopener">X</a>
     </nav>
   </footer>
 
@@ -94,15 +96,17 @@
 <script>
 (function () {
   /* ------------------------------------------------------------------
-     Leaderboard data.
+     Leaderboard data. Solana only.
      Empty until a round is running. The backend fills ENTRIES with
      objects shaped like:
-       { address: '7xKq...4mPd', chain: 'sol' | 'rh',
+       { address: '<full solana address>',
          deposit: 1000, pnl: 5120, roi: 512, trades: 41 }
      Sorting, ranking, pot shares and paging all follow automatically.
+     Each row links to the wallet on Solscan.
   ------------------------------------------------------------------ */
   var ENTRIES = [];
   var PAGE_SIZE = 20;
+  var SOLSCAN = 'https://solscan.io/account/';
 
   var shown = PAGE_SIZE;
   var sortKey = 'pnl';
@@ -114,10 +118,11 @@
   var moreBtn = document.getElementById('moreBtn');
   var enteredEl = document.getElementById('entered');
 
-  var CHAIN_SVG = {
-    sol: '<svg viewBox="0 0 397.7 311.7" fill="currentColor" aria-hidden="true"><path d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7z"/><path d="M64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8z"/><path d="M333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z"/></svg>',
-    rh: '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M2.84 24h.53c.096 0 .192-.048.224-.128C7.591 13.696 11.94 8.656 14.67 5.638c.112-.128.064-.225-.096-.225h-4.88a.55.55 0 0 0-.45.225L5.746 9.972c-.514.642-.642 1.236-.642 2.086v4.43c-1.14 3.194-1.862 5.361-2.392 7.32-.032.125.016.192.129.192M20.447.646c-.754-.802-4.157-.834-5.73-.224a3 3 0 0 0-.786.465 41 41 0 0 0-3.323 3.178c-.112.113-.064.225.097.225h5.409c.497 0 .786.289.786.786v6.1c0 .16.128.208.225.064l3.258-4.254c.53-.69.69-.898.835-1.861.192-1.413.08-3.58-.77-4.479m-6.982 16.18 2.231-3.676a.7.7 0 0 0 .064-.29V6.73c0-.16-.112-.225-.224-.097-3.355 3.74-5.971 7.672-8.395 12.407-.06.12.016.225.16.177l5.009-1.54c.565-.174.882-.402 1.155-.852"/></svg>'
-  };
+  var SOL_SVG = '<svg viewBox="0 0 397.7 311.7" fill="currentColor" aria-hidden="true"><path d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7z"/><path d="M64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8z"/><path d="M333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z"/></svg>';
+
+  function shortAddr(a) {
+    return a.length > 12 ? a.slice(0, 4) + '…' + a.slice(-4) : a;
+  }
 
   function money(n) {
     var sign = n < 0 ? '−' : '+';
@@ -163,11 +168,12 @@
           (e.trades ? ' · ' + e.trades + ' trades' : '') + '</span>'
         : '';
       return '' +
-        '<a class="row' + (isTop ? ' top' : '') + '" href="#">' +
+        '<a class="row' + (isTop ? ' top' : '') + '" href="' + SOLSCAN + encodeURIComponent(e.address) +
+          '" target="_blank" rel="noopener" title="View on Solscan">' +
           '<span class="rank">' + rankCell + '</span>' +
           '<span class="who">' +
-            '<span class="chain">' + (CHAIN_SVG[e.chain] || '') + '</span>' +
-            '<span><span class="addr">' + esc(e.address) + '</span>' + sub + '</span>' +
+            '<span class="chain">' + SOL_SVG + '</span>' +
+            '<span><span class="addr">' + esc(shortAddr(e.address)) + '</span>' + sub + '</span>' +
           '</span>' +
           '<span class="pnl ' + (e.pnl < 0 ? 'down' : 'up') + '">' + money(e.pnl) + '</span>' +
           '<span class="roi">' + pct(e.roi) + '</span>' +
