@@ -17,6 +17,7 @@
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
+[hidden] { display: none !important; }
 
 html { scroll-behavior: smooth; }
 body {
@@ -231,7 +232,26 @@ h1 {
   white-space: nowrap;
 }
 
-.empty { padding: 70px 20px; text-align: center; color: var(--muted); font-size: 16px; }
+.empty {
+  padding: 78px 20px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 16px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.lb-more { display: flex; justify-content: center; padding: 26px 0 0; }
+.more-btn {
+  height: 44px;
+  padding: 0 28px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  font-size: 15px;
+  color: var(--ink);
+  transition: background .25s var(--ease), border-color .25s var(--ease);
+}
+.more-btn:hover { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.26); }
 
 /* ---------- Prose (rules / faq) ---------- */
 .prose { max-width: 720px; padding-bottom: 20px; }
