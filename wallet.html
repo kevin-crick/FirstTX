@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Wallet · FirstTX</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="pages.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="site-head">
+    <a class="brand" href="index.html" aria-label="FirstTX home"><img src="logo.png" alt="FirstTX"></a>
+    <nav class="nav" id="nav" aria-label="Primary">
+      <a href="leaderboard.html">Leaderboard</a>
+      <a href="rules.html">Rules</a>
+      <a href="faq.html">FAQ</a>
+      <a href="https://x.com/tryfirsttx" target="_blank" rel="noopener">X</a>
+    </nav>
+    <a class="pill head-cta" href="enter.html">Enter Round</a>
+    <button class="nav-toggle" id="navToggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav"><i></i></button>
+  </header>
+
+  <div class="page-head">
+    <p class="eyebrow"><a href="leaderboard.html" class="back">← Leaderboard</a></p>
+    <h1 class="wallet-title" id="title">Wallet</h1>
+    <p class="lede" id="sub">Loading…</p>
+  </div>
+
+  <div id="panel" hidden>
+    <div class="round-bar">
+      <div class="round-cell">
+        <p class="round-label">Profit and loss</p>
+        <p class="round-value" id="pnl">—</p>
+        <p class="round-note" id="pnlNote">Against the opening deposit</p>
+      </div>
+      <div class="round-cell">
+        <p class="round-label">Wallet value</p>
+        <p class="round-value" id="value">—</p>
+        <p class="round-note" id="valueNote">Priced at what it would sell for</p>
+      </div>
+      <div class="round-cell">
+        <p class="round-label">Rank</p>
+        <p class="round-value" id="rank">—</p>
+        <p class="round-note" id="rankNote">Updated every 5 minutes</p>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-head">
+        <span class="chart-title">Profit through the round</span>
+        <span class="chart-range" id="range"></span>
+      </div>
+      <div id="chart" class="chart"></div>
+      <p class="chart-empty" id="chartEmpty">The line appears once the wallet has been scored a few times.</p>
+    </div>
+
+    <div class="facts">
+      <div class="fact"><span class="k">Opening deposit</span><span class="v" id="deposit">—</span></div>
+      <div class="fact"><span class="k">Trades</span><span class="v" id="trades">—</span></div>
+      <div class="fact"><span class="k">Cash right now</span><span class="v" id="cash">—</span></div>
+      <div class="fact"><span class="k">Pot share</span><span class="v" id="share">—</span></div>
+      <div class="fact"><span class="k">Round</span><span class="v" id="round">—</span></div>
+      <div class="fact"><span class="k">Status</span><span class="v" id="status">—</span></div>
+    </div>
+
+    <div class="cta-band">
+      <p id="addr" class="addr-full"></p>
+      <a class="pill pill-lg" id="solscan" href="#" target="_blank" rel="noopener">View on Solscan</a>
+    </div>
+  </div>
+
+  <p class="empty" id="missing" hidden>That wallet is not in a round. Open the leaderboard to see who is.</p>
+
+  <footer class="site-foot">
+    <span>FirstTX</span>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="leaderboard.html">Leaderboard</a>
+      <a href="rules.html">Rules</a>
+      <a href="https://x.com/tryfirsttx" target="_blank" rel="noopener">X</a>
+    </nav>
+  </footer>
+
+</div>
+
+<script src="app.js"></script>
+<script>
+(function () {
+  var F = window.FIRSTTX;
+  var el = function (id) { return document.getElementById(id); };
+  var address = new URLSearchParams(location.search).get('address') || '';
+
+  function drawChart(history) {
+    var box = el('chart');
+    if (!history || history.length < 2) {
+      el('chartEmpty').hidden = false;
+      box.innerHTML = '';
+      return;
+    }
+    el('chartEmpty').hidden = true;
+
+    var W = 1000;
+    var H = 260;
+    var pad = 10;
+    var xs = history.map(function (p) { return p.ts; });
+    var ys = history.map(function (p) { return p.pnl; });
+    var minX = Math.min.apply(null, xs);
+    var maxX = Math.max.apply(null, xs);
+    var minY = Math.min.apply(null, ys.concat([0]));
+    var maxY = Math.max.apply(null, ys.concat([0]));
+    if (maxY === minY) { maxY += 1; minY -= 1; }
+
+    var sx = function (x) { return pad + ((x - minX) / (maxX - minX || 1)) * (W - pad * 2); };
+    var sy = function (y) { return H - pad - ((y - minY) / (maxY - minY)) * (H - pad * 2); };
+
+    var line = history.map(function (p, i) { return (i ? 'L' : 'M') + sx(p.ts).toFixed(1) + ' ' + sy(p.pnl).toFixed(1); }).join(' ');
+    var area = line + ' L' + sx(maxX).toFixed(1) + ' ' + sy(minY).toFixed(1) + ' L' + sx(minX).toFixed(1) + ' ' + sy(minY).toFixed(1) + ' Z';
+    var zero = sy(0).toFixed(1);
+    var up = ys[ys.length - 1] >= 0;
+    var stroke = up ? '#d8f9e4' : '#f6d2d2';
+
+    box.innerHTML =
+      '<svg viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" role="img" aria-label="Profit through the round">' +
+        '<defs><linearGradient id="fill" x1="0" y1="0" x2="0" y2="1">' +
+          '<stop offset="0%" stop-color="' + stroke + '" stop-opacity="0.14"/>' +
+          '<stop offset="100%" stop-color="' + stroke + '" stop-opacity="0"/>' +
+        '</linearGradient></defs>' +
+        '<line x1="0" y1="' + zero + '" x2="' + W + '" y2="' + zero + '" stroke="rgba(255,255,255,.16)" stroke-width="1" stroke-dasharray="4 6"/>' +
+        '<path d="' + area + '" fill="url(#fill)"/>' +
+        '<path d="' + line + '" fill="none" stroke="' + stroke + '" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke"/>' +
+      '</svg>';
+
+    var first = new Date(minX * 1000);
+    var last = new Date(maxX * 1000);
+    var time = function (d) { return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); };
+    el('range').textContent = time(first) + ' – ' + time(last);
+  }
+
+  async function load() {
+    if (!address) {
+      el('sub').textContent = 'No wallet was given.';
+      el('missing').hidden = false;
+      return;
+    }
+    el('title').textContent = F.shortAddr(address);
+
+    try {
+      var w = await F.api('/api/wallet/' + encodeURIComponent(address));
+
+      el('sub').textContent =
+        w.status === 'disqualified'
+          ? 'Disqualified from round ' + String(w.round).padStart(3, '0') + '.'
+          : 'Round ' + String(w.round).padStart(3, '0') + ' · started empty, ' +
+            (w.deposit ? 'funded with ' + F.money(w.deposit) : 'not funded yet');
+
+      el('pnl').textContent = F.money(w.pnl, true);
+      el('pnl').className = 'round-value ' + (w.pnl < 0 ? 'down' : 'up');
+      el('pnlNote').textContent = w.deposit ? F.pct(w.roi) + ' on ' + F.money(w.deposit) : 'Waiting for the opening deposit';
+
+      el('value').textContent = F.money(w.value);
+      el('rank').textContent = w.rank ? '#' + w.rank : '—';
+      el('rankNote').textContent = w.rank ? 'Final placing' : 'Live ranking is on the leaderboard';
+
+      el('deposit').textContent = w.deposit ? F.money(w.deposit) : '—';
+      el('trades').textContent = w.trades != null ? w.trades : '—';
+      el('cash').textContent = F.money(w.cash);
+      el('share').textContent = w.potShare ? Math.round(w.potShare) + '%' : '—';
+      el('round').textContent = String(w.round).padStart(3, '0');
+      el('status').textContent = w.status === 'active' ? 'In the round' : w.status;
+
+      el('addr').textContent = address;
+      el('solscan').href = w.solscan || (F.SOLSCAN + address);
+
+      drawChart(w.history || []);
+      el('panel').hidden = false;
+    } catch (err) {
+      el('sub').textContent = 'This wallet has no entry yet.';
+      el('missing').hidden = false;
+    }
+  }
+
+  load();
+  setInterval(load, 60000);
+
+  var nav = el('nav');
+  var toggle = el('navToggle');
+  toggle.addEventListener('click', function () {
+    var open = nav.classList.toggle('open');
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+  });
+})();
+</script>
+</body>
+</html>

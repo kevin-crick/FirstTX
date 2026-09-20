@@ -1,0 +1,76 @@
+/* Boot: database, scheduler, HTTP server. */
+
+import http from 'node:http';
+import { config } from './config.js';
+import { handleRequest } from './api.js';
+import { ensureRounds, refreshStatuses, currentRound, roundsNeedingSnapshot, takeSnapshot, phaseOf } from './rounds.js';
+import { indexRound, finalizeRound } from './indexer.js';
+import { queryOne, now } from './db.js';
+
+const log = (...args) => console.log(new Date().toISOString(), ...args);
+
+let indexing = false;
+
+async function tick() {
+  if (indexing) return;
+  indexing = true;
+  try {
+    ensureRounds();
+    refreshStatuses();
+
+    /* Holder snapshot, once per round, when registration opens. */
+    for (const round of roundsNeedingSnapshot()) {
+      const result = await takeSnapshot(round.id);
+      log(`snapshot round ${round.number}:`, result.ok ? `${result.holders} eligible holders` : result.reason);
+    }
+
+    const round = currentRound();
+    if (!round) return;
+    const phase = phaseOf(round);
+
+    if (phase === 'deposit-window' || phase === 'trading') {
+      const results = await indexRound(round);
+      const errors = results.filter((r) => r.error);
+      log(`indexed round ${round.number}: ${results.length} wallets${errors.length ? `, ${errors.length} errors` : ''}`);
+    }
+
+    /* First pass after the clock runs out freezes the result. */
+    if (phase === 'review' && round.status !== 'settled') {
+      const frozen = queryOne(
+        `SELECT COUNT(*) AS n FROM entries WHERE round_id = ? AND final_rank IS NOT NULL`,
+        round.id,
+      );
+      if (!frozen?.n) {
+        await indexRound(round); // final valuation: cash only
+        const result = finalizeRound(round);
+        log(`round ${round.number} finished:`, result);
+      }
+    }
+  } catch (err) {
+    log('tick failed:', err.message);
+  } finally {
+    indexing = false;
+  }
+}
+
+ensureRounds();
+const round = currentRound();
+log(`FirstTX backend starting — round ${round?.number} (${phaseOf(round)})`);
+if (!config.coinMint) log('WARNING: COIN_MINT is not set, so the $25 holding requirement is skipped.');
+if (!config.adminToken) log('WARNING: ADMIN_TOKEN is not set, so admin endpoints are disabled.');
+
+tick();
+setInterval(tick, Math.max(30, config.indexIntervalSeconds) * 1000);
+
+const server = http.createServer(handleRequest);
+server.listen(config.port, () => log(`API listening on http://localhost:${config.port}`));
+
+const shutdown = () => {
+  log('shutting down');
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 3000).unref();
+};
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);
+
+export { tick, now };

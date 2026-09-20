@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Enter round · FirstTX</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="pages.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="site-head">
+    <a class="brand" href="index.html" aria-label="FirstTX home"><img src="logo.png" alt="FirstTX"></a>
+    <nav class="nav" id="nav" aria-label="Primary">
+      <a href="leaderboard.html">Leaderboard</a>
+      <a href="rules.html">Rules</a>
+      <a href="faq.html">FAQ</a>
+      <a href="https://x.com/tryfirsttx" target="_blank" rel="noopener">X</a>
+    </nav>
+    <button class="nav-toggle" id="navToggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav"><i></i></button>
+  </header>
+
+  <div class="page-head">
+    <p class="eyebrow" id="roundLabel">Loading…</p>
+    <h1>Enter the round</h1>
+    <p class="lede">Two signatures, no transactions, nothing to pay. Your holder wallet proves you hold the coin; your fresh wallet is the one that trades.</p>
+  </div>
+
+  <div class="prose" style="max-width:720px">
+
+    <section style="border-top:0;padding-top:0">
+      <div class="steps">
+        <div class="step" id="step1">
+          <h3>Holder wallet</h3>
+          <p>Connect the wallet holding at least <span id="minHold">$25</span> of the FirstTX coin, then sign to prove it is yours.</p>
+          <p class="state" id="state1">Not connected</p>
+          <button class="pill pill-lg" id="btn1" type="button">Connect and sign</button>
+        </div>
+
+        <div class="step" id="step2">
+          <h3>Competition wallet</h3>
+          <p>Switch to a brand-new wallet in Phantom, one with no transactions and no balance, then connect and sign again.</p>
+          <p class="state" id="state2">Waiting for the holder wallet</p>
+          <button class="pill pill-lg" id="btn2" type="button" disabled>Switch wallet and sign</button>
+        </div>
+
+        <div class="step" id="step3">
+          <h3>Join the leaderboard</h3>
+          <p>We check that the wallet is clean and that your holding was in place at the snapshot, then add you to the round.</p>
+          <p class="state" id="state3">Waiting for both signatures</p>
+          <button class="pill pill-lg" id="btn3" type="button" disabled>Enter round</button>
+        </div>
+      </div>
+
+      <p class="note" id="result"></p>
+    </section>
+
+    <section>
+      <h2>After you enter</h2>
+      <ul>
+        <li>Send <strong>up to <span id="cap">$1,000</span></strong> to your competition wallet during the deposit window. That is your starting balance.</li>
+        <li>No further deposits, and nothing may leave the wallet. Swaps only.</li>
+        <li>Close your positions before the clock runs out: only cash counts at the end.</li>
+      </ul>
+      <p style="margin-top:14px"><a class="ghost-link" href="rules.html">Read the full rules</a></p>
+    </section>
+
+  </div>
+
+  <footer class="site-foot">
+    <span>FirstTX</span>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="leaderboard.html">Leaderboard</a>
+      <a href="rules.html">Rules</a>
+      <a href="https://x.com/tryfirsttx" target="_blank" rel="noopener">X</a>
+    </nav>
+  </footer>
+
+</div>
+
+<script src="app.js"></script>
+<script>
+(function () {
+  var F = window.FIRSTTX;
+  var round = null;
+  var nonce = null;
+  var holder = null; // { address, signature }
+  var comp = null;
+
+  var el = function (id) { return document.getElementById(id); };
+
+  function setState(id, text, kind) {
+    var node = el(id);
+    node.textContent = text;
+    node.className = 'state' + (kind ? ' ' + kind : '');
+  }
+
+  function message(role, wallet) {
+    return [
+      'FirstTX registration',
+      'Role: ' + role,
+      'Round: ' + round.number,
+      'Wallet: ' + wallet,
+      'Nonce: ' + nonce,
+      'Signing this proves you own the wallet. It is free and creates no transaction.',
+    ].join('\n');
+  }
+
+  async function connectAndSign(role) {
+    var provider = F.getProvider();
+    if (!provider) throw new Error('No Solana wallet found. Install Phantom, then reload this page.');
+
+    /* Ask Phantom to show the account picker so the two steps can use
+       different wallets. */
+    try {
+      if (provider.disconnect) await provider.disconnect();
+    } catch (err) {
+      /* some wallets do not support disconnect */
+    }
+
+    var connection = await provider.connect();
+    var address = (connection?.publicKey || provider.publicKey).toString();
+    var encoded = new TextEncoder().encode(message(role, address));
+    var signed = await provider.signMessage(encoded, 'utf8');
+    var raw = signed?.signature || signed;
+    return { address: address, signature: F.encodeBase58(new Uint8Array(raw)) };
+  }
+
+  el('btn1').addEventListener('click', async function () {
+    try {
+      setState('state1', 'Check Phantom…');
+      holder = await connectAndSign('holder');
+      setState('state1', 'Signed as ' + F.shortAddr(holder.address), 'ok');
+      el('btn2').disabled = false;
+      setState('state2', 'Switch to your fresh wallet in Phantom, then sign');
+    } catch (err) {
+      setState('state1', err.message, 'bad');
+    }
+  });
+
+  el('btn2').addEventListener('click', async function () {
+    try {
+      setState('state2', 'Check Phantom…');
+      comp = await connectAndSign('competition');
+      if (comp.address === holder.address) {
+        comp = null;
+        setState('state2', 'That is the same wallet. Switch accounts in Phantom and sign again.', 'bad');
+        return;
+      }
+      setState('state2', 'Signed as ' + F.shortAddr(comp.address), 'ok');
+      el('btn3').disabled = false;
+      setState('state3', 'Ready to enter');
+    } catch (err) {
+      setState('state2', err.message, 'bad');
+    }
+  });
+
+  el('btn3').addEventListener('click', async function () {
+    el('btn3').disabled = true;
+    setState('state3', 'Checking your wallets…');
+    try {
+      var result = await F.api('/api/register', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          nonce: nonce,
+          holderWallet: holder.address,
+          holderSignature: holder.signature,
+          compWallet: comp.address,
+          compSignature: comp.signature,
+        }),
+      });
+      setState('state3', 'You are in. Wallet ' + F.shortAddr(comp.address) + ' is on the leaderboard.', 'ok');
+      el('result').innerHTML =
+        'Fund it with up to ' + F.money(result.depositCapUsd) + ' during the deposit window. ' +
+        '<a href="leaderboard.html">Open the leaderboard</a>.';
+    } catch (err) {
+      setState('state3', err.message, 'bad');
+      el('btn3').disabled = false;
+      /* A used nonce cannot be replayed, so start a fresh one. */
+      try {
+        nonce = (await F.api('/api/nonce')).nonce;
+        holder = null;
+        comp = null;
+        el('btn2').disabled = true;
+        el('btn3').disabled = true;
+        setState('state1', 'Sign again to retry');
+        setState('state2', 'Waiting for the holder wallet');
+      } catch (e) {}
+    }
+  });
+
+  (async function start() {
+    try {
+      var info = await F.api('/api/round');
+      round = info.registration || info.round;
+      nonce = (await F.api('/api/nonce')).nonce;
+
+      if (!info.registration) {
+        el('roundLabel').textContent = 'Registration is closed right now';
+        setState('state1', 'Registration opens midday UTC the day before each round');
+        el('btn1').disabled = true;
+        return;
+      }
+      el('roundLabel').textContent =
+        'Round ' + String(round.number).padStart(3, '0') + ' · registration open';
+      el('minHold').textContent = F.money(round.minHoldUsd);
+      el('cap').textContent = F.money(round.depositCapUsd);
+      setState('state1', 'Not connected');
+    } catch (err) {
+      el('roundLabel').textContent = 'Cannot reach the server';
+      setState('state1', 'Registration is unavailable right now. Try again shortly.', 'bad');
+      el('btn1').disabled = true;
+    }
+  })();
+
+  var nav = el('nav');
+  var toggle = el('navToggle');
+  toggle.addEventListener('click', function () {
+    var open = nav.classList.toggle('open');
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+  });
+})();
+</script>
+</body>
+</html>

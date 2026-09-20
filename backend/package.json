@@ -1,0 +1,14 @@
+{
+  "name": "firsttx-backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "FirstTX daily trading competition backend (Solana). No external dependencies.",
+  "engines": { "node": ">=22.5" },
+  "scripts": {
+    "start": "node src/server.js",
+    "check": "node src/scripts/check-endpoints.js",
+    "round": "node src/scripts/round-tool.js",
+    "index-once": "node src/scripts/index-once.js"
+  }
+}

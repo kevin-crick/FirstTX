@@ -21,21 +21,21 @@
       <a href="faq.html">FAQ</a>
       <a href="https://x.com/tryfirsttx" target="_blank" rel="noopener">X</a>
     </nav>
-    <a class="pill head-cta" href="#">Enter Round</a>
+    <a class="pill head-cta" href="enter.html">Enter Round</a>
     <button class="nav-toggle" id="navToggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav"><i></i></button>
   </header>
 
   <div class="page-head">
-    <p class="eyebrow" id="roundLabel">Round 001</p>
+    <p class="eyebrow" id="roundLabel">Round</p>
     <h1>Leaderboard</h1>
     <p class="lede">Every wallet starts the round empty. Profit and loss is measured against each wallet's opening deposit and refreshes every 5 minutes. Click any wallet to open it on Solscan.</p>
   </div>
 
   <div class="round-bar">
     <div class="round-cell">
-      <p class="round-label">Round ends in</p>
+      <p class="round-label" id="clockLabel">Round ends in</p>
       <p class="round-value" id="countdown">--:--:--</p>
-      <p class="round-note">Next round opens straight after</p>
+      <p class="round-note" id="clockNote">Next round opens straight after</p>
     </div>
     <div class="round-cell">
       <p class="round-label">Prize pot</p>
@@ -45,7 +45,7 @@
     <div class="round-cell">
       <p class="round-label">Wallets entered</p>
       <p class="round-value" id="entered">0</p>
-      <p class="round-note">Deposit cap $1,000 per wallet</p>
+      <p class="round-note" id="capNote">Deposit cap $1,000 per wallet</p>
     </div>
   </div>
 
@@ -55,7 +55,7 @@
       <button type="button" data-sort="roi">ROI</button>
       <button type="button" data-sort="trades">Trades</button>
     </div>
-    <p class="updated" id="updated">No round running</p>
+    <p class="updated" id="updated">Loading…</p>
   </div>
 
   <div class="lb">
@@ -69,7 +69,7 @@
 
     <div id="rows"></div>
 
-    <p class="empty" id="empty">No wallets yet. Entries appear here the moment the round opens.</p>
+    <p class="empty" id="empty">Loading the current round…</p>
 
     <div class="lb-more" id="moreWrap" hidden>
       <button class="more-btn" id="moreBtn" type="button">Load more</button>
@@ -78,7 +78,7 @@
 
   <div class="cta-band">
     <p>Rounds run midnight to midnight UTC. Registration opens the day before.</p>
-    <a class="pill pill-lg" href="#">Enter Round</a>
+    <a class="pill pill-lg" href="enter.html">Enter Round</a>
   </div>
 
   <footer class="site-foot">
@@ -93,21 +93,15 @@
 
 </div>
 
+<script src="app.js"></script>
 <script>
 (function () {
-  /* ------------------------------------------------------------------
-     Leaderboard data. Solana only.
-     Empty until a round is running. The backend fills ENTRIES with
-     objects shaped like:
-       { address: '<full solana address>',
-         deposit: 1000, pnl: 5120, roi: 512, trades: 41 }
-     Sorting, ranking, pot shares and paging all follow automatically.
-     Each row links to the wallet on Solscan.
-  ------------------------------------------------------------------ */
-  var ENTRIES = [];
+  var F = window.FIRSTTX;
   var PAGE_SIZE = 20;
-  var SOLSCAN = 'https://solscan.io/account/';
+  var REFRESH_MS = 60000;
 
+  var entries = [];
+  var round = null;
   var shown = PAGE_SIZE;
   var sortKey = 'pnl';
 
@@ -116,21 +110,10 @@
   var headEl = document.getElementById('lbHead');
   var moreWrap = document.getElementById('moreWrap');
   var moreBtn = document.getElementById('moreBtn');
-  var enteredEl = document.getElementById('entered');
+  var updatedEl = document.getElementById('updated');
 
   var SOL_SVG = '<svg viewBox="0 0 397.7 311.7" fill="currentColor" aria-hidden="true"><path d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7z"/><path d="M64.6 3.8C67.1 1.4 70.4 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8z"/><path d="M333.1 120.1c-2.4-2.4-5.7-3.8-9.2-3.8H6.5c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z"/></svg>';
 
-  function shortAddr(a) {
-    return a.length > 12 ? a.slice(0, 4) + '…' + a.slice(-4) : a;
-  }
-
-  function money(n) {
-    var sign = n < 0 ? '−' : '+';
-    return sign + '$' + Math.abs(Math.round(n)).toLocaleString('en-US');
-  }
-  function pct(n) {
-    return (n < 0 ? '−' : '+') + Math.abs(Math.round(n)) + '%';
-  }
   function esc(s) {
     return String(s).replace(/[&<>"]/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
@@ -148,38 +131,92 @@
   }
 
   function render() {
-    var sorted = ENTRIES.slice().sort(function (a, b) { return b[sortKey] - a[sortKey]; });
+    var sorted = entries.slice().sort(function (a, b) { return b[sortKey] - a[sortKey]; });
     var share = shares(sorted);
     var visible = sorted.slice(0, shown);
 
-    enteredEl.textContent = ENTRIES.length.toLocaleString('en-US');
-    emptyEl.hidden = ENTRIES.length > 0;
-    headEl.hidden = ENTRIES.length === 0;
-    moreWrap.hidden = ENTRIES.length <= shown;
+    emptyEl.hidden = entries.length > 0;
+    headEl.hidden = entries.length === 0;
+    moreWrap.hidden = entries.length <= shown;
 
     rowsEl.innerHTML = visible.map(function (e, i) {
       var rank = i + 1;
       var isTop = rank <= 3 && sortKey === 'pnl';
-      var rankCell = isTop
-        ? '<span class="medal m' + rank + '">' + rank + '</span>'
-        : rank;
+      var rankCell = isTop ? '<span class="medal m' + rank + '">' + rank + '</span>' : rank;
       var sub = e.deposit
-        ? '<span class="who-sub">Deposited $' + Number(e.deposit).toLocaleString('en-US') +
+        ? '<span class="who-sub">Deposited ' + F.money(e.deposit) +
           (e.trades ? ' · ' + e.trades + ' trades' : '') + '</span>'
         : '';
       return '' +
-        '<a class="row' + (isTop ? ' top' : '') + '" href="' + SOLSCAN + encodeURIComponent(e.address) +
-          '" target="_blank" rel="noopener" title="View on Solscan">' +
+        '<a class="row' + (isTop ? ' top' : '') + '" href="wallet.html?address=' + encodeURIComponent(e.address) +
+          '" title="Open this wallet">' +
           '<span class="rank">' + rankCell + '</span>' +
           '<span class="who">' +
             '<span class="chain">' + SOL_SVG + '</span>' +
-            '<span><span class="addr">' + esc(shortAddr(e.address)) + '</span>' + sub + '</span>' +
+            '<span><span class="addr">' + esc(F.shortAddr(e.address)) + '</span>' + sub + '</span>' +
           '</span>' +
-          '<span class="pnl ' + (e.pnl < 0 ? 'down' : 'up') + '">' + money(e.pnl) + '</span>' +
-          '<span class="roi">' + pct(e.roi) + '</span>' +
+          '<span class="pnl ' + (e.pnl < 0 ? 'down' : 'up') + '">' + F.money(e.pnl, true) + '</span>' +
+          '<span class="roi">' + F.pct(e.roi) + '</span>' +
           '<span class="share">' + (share[e.address] || '—') + '</span>' +
         '</a>';
     }).join('');
+  }
+
+  var PHASE_TEXT = {
+    upcoming: 'Registration has not opened yet',
+    registration: 'Registration is open',
+    'deposit-window': 'Deposit window is open',
+    trading: 'Live',
+    review: 'Round over, top three under review',
+    settled: 'Settled',
+  };
+
+  function paintRound() {
+    if (!round) return;
+    document.getElementById('roundLabel').textContent =
+      'Round ' + String(round.number).padStart(3, '0') + ' · ' + (PHASE_TEXT[round.phase] || round.phase);
+    document.getElementById('pot').textContent = F.money(round.potUsd);
+    document.getElementById('entered').textContent = (round.walletsEntered || 0).toLocaleString('en-US');
+    document.getElementById('capNote').textContent = 'Deposit cap ' + F.money(round.depositCapUsd) + ' per wallet';
+
+    var startingSoon = round.phase === 'upcoming' || round.phase === 'registration';
+    document.getElementById('clockLabel').textContent = startingSoon ? 'Round starts in' : 'Round ends in';
+    document.getElementById('clockNote').textContent = startingSoon
+      ? 'Deposit window opens with the round'
+      : 'Next round opens straight after';
+  }
+
+  function tick() {
+    if (!round) return;
+    var target = round.phase === 'upcoming' || round.phase === 'registration' ? round.opensAt : round.endsAt;
+    document.getElementById('countdown').textContent = F.countdown(target);
+  }
+
+  async function load() {
+    try {
+      var data = await F.api('/api/leaderboard');
+      round = data.round;
+      entries = (data.entries || []).map(function (e) {
+        return {
+          address: e.address,
+          deposit: e.deposit,
+          pnl: e.pnl,
+          roi: e.roi,
+          trades: e.trades,
+        };
+      });
+      paintRound();
+      tick();
+      emptyEl.textContent = 'No wallets yet. Entries appear here the moment the round opens.';
+      updatedEl.textContent = entries.length
+        ? 'Updated ' + new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        : PHASE_TEXT[round?.phase] || 'Waiting for the next round';
+      render();
+    } catch (err) {
+      emptyEl.textContent = 'The leaderboard is not reachable right now. It will appear here once the round is running.';
+      updatedEl.textContent = 'Offline';
+      render();
+    }
   }
 
   moreBtn.addEventListener('click', function () {
@@ -197,23 +234,10 @@
     });
   });
 
-  render();
-
-  /* Countdown to the next round boundary (midnight UTC). */
-  var out = document.getElementById('countdown');
-  function tick() {
-    var now = new Date();
-    var end = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0);
-    var left = Math.max(0, Math.floor((end - now.getTime()) / 1000));
-    var h = String(Math.floor(left / 3600)).padStart(2, '0');
-    var m = String(Math.floor((left % 3600) / 60)).padStart(2, '0');
-    var s = String(left % 60).padStart(2, '0');
-    out.textContent = h + ':' + m + ':' + s;
-  }
-  tick();
+  load();
+  setInterval(load, REFRESH_MS);
   setInterval(tick, 1000);
 
-  /* Mobile nav */
   var nav = document.getElementById('nav');
   var toggle = document.getElementById('navToggle');
   toggle.addEventListener('click', function () {
