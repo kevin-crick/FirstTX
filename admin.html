@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Admin · FirstTX</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="pages.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="site-head">
+    <a class="brand" href="index.html" aria-label="FirstTX home"><img src="logo.png" alt="FirstTX"></a>
+    <nav class="nav" id="nav" aria-label="Primary">
+      <a href="leaderboard.html">Leaderboard</a>
+      <a href="rules.html">Rules</a>
+      <a href="faq.html">FAQ</a>
+    </nav>
+    <button class="nav-toggle" id="navToggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav"><i></i></button>
+  </header>
+
+  <div class="page-head">
+    <p class="eyebrow">Private</p>
+    <h1>Admin</h1>
+    <p class="lede">Start and stop rounds, set the pot, and review the top wallets before paying out.</p>
+  </div>
+
+  <!-- Sign in -->
+  <section id="lock" class="prose" style="max-width:520px">
+    <p class="state" id="lockState">Paste your admin token to continue. It stays in this browser.</p>
+    <input class="addr-input" id="token" type="password" placeholder="Admin token" autocomplete="off">
+    <p style="margin-top:16px"><button class="pill pill-lg" id="unlock" type="button">Unlock</button></p>
+  </section>
+
+  <!-- Panel -->
+  <div id="panel" hidden>
+
+    <div class="round-bar">
+      <div class="round-cell">
+        <p class="round-label">Round</p>
+        <p class="round-value" id="roundNumber">—</p>
+        <p class="round-note" id="roundStatus">—</p>
+      </div>
+      <div class="round-cell">
+        <p class="round-label" id="clockLabel">Time left</p>
+        <p class="round-value" id="clock">—</p>
+        <p class="round-note" id="clockNote">—</p>
+      </div>
+      <div class="round-cell">
+        <p class="round-label">Wallets entered</p>
+        <p class="round-value" id="entered">0</p>
+        <p class="round-note" id="snapshotNote">—</p>
+      </div>
+    </div>
+
+    <section class="admin-block">
+      <h2>Round control</h2>
+      <p class="admin-help" id="controlHelp">—</p>
+      <div class="admin-actions">
+        <button class="pill pill-lg" id="btnCreate" type="button">Open registration</button>
+        <button class="pill pill-lg" id="btnStart" type="button">Start 24 hour round</button>
+        <button class="ghost-link" id="btnEnd" type="button">End round now</button>
+      </div>
+      <p class="state" id="controlState"></p>
+    </section>
+
+    <section class="admin-block">
+      <h2>Prize pot</h2>
+      <p class="admin-help">What the top three share. Shown live on the site.</p>
+      <div class="admin-actions">
+        <input class="addr-input" id="potInput" type="number" min="0" step="1" placeholder="Pot in dollars" style="max-width:220px">
+        <button class="pill pill-lg" id="btnPot" type="button">Set pot</button>
+      </div>
+      <p class="state" id="potState"></p>
+    </section>
+
+    <section class="admin-block">
+      <h2>Review before paying</h2>
+      <p class="admin-help">Top wallets with their deposits, funding sources and anything flagged. Check these before sending the pot.</p>
+      <div id="review"></div>
+      <p class="state" id="reviewState">—</p>
+    </section>
+
+  </div>
+
+  <footer class="site-foot">
+    <span>FirstTX admin</span>
+    <nav><a href="index.html">Home</a><a href="leaderboard.html">Leaderboard</a></nav>
+  </footer>
+
+</div>
+
+<script src="app.js"></script>
+<script>
+(function () {
+  var F = window.FIRSTTX;
+  var el = function (id) { return document.getElementById(id); };
+  var TOKEN_KEY = 'firsttx.admin';
+  var token = '';
+  var round = null;
+
+  function save(t) { try { sessionStorage.setItem(TOKEN_KEY, t); } catch (e) {} }
+  function load() { try { return sessionStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; } }
+
+  async function api(path, options) {
+    options = options || {};
+    options.headers = Object.assign({ authorization: 'Bearer ' + token, 'content-type': 'application/json' }, options.headers || {});
+    return F.api(path, options);
+  }
+
+  function setState(id, text, kind) {
+    var node = el(id);
+    node.textContent = text || '';
+    node.className = 'state' + (kind ? ' ' + kind : '');
+  }
+
+  var PHASE = {
+    registration: 'Registration open, not started',
+    'deposit-window': 'Running, deposit window open',
+    trading: 'Running',
+    review: 'Finished, awaiting review',
+    settled: 'Settled',
+  };
+
+  function paint(info) {
+    round = info.round;
+    var reg = info.registration;
+    var showing = round || reg;
+    if (!showing) return;
+
+    el('roundNumber').textContent = String(showing.number).padStart(3, '0');
+    el('roundStatus').textContent = PHASE[showing.phase] || showing.phase;
+    el('entered').textContent = (showing.walletsEntered || 0).toLocaleString('en-US');
+    el('snapshotNote').textContent = showing.coinMint ? 'Holder snapshot in place' : 'No coin set, $25 rule skipped';
+    el('potInput').placeholder = 'Pot in dollars (now ' + F.money(showing.potUsd) + ')';
+
+    var started = showing.phase !== 'registration';
+    el('clockLabel').textContent = started ? 'Time left' : 'Not started';
+    el('clockNote').textContent = started ? 'Ends automatically' : 'Press start when you are ready';
+
+    el('btnCreate').disabled = Boolean(reg) || (round && round.phase !== 'review' && round.phase !== 'settled');
+    el('btnStart').disabled = !reg || (round && round.phase !== 'registration' && round.phase !== 'review' && round.phase !== 'settled');
+    el('btnEnd').disabled = !started || showing.phase === 'review' || showing.phase === 'settled';
+
+    el('controlHelp').textContent = !reg && !started
+      ? 'Open registration to start taking entries.'
+      : showing.phase === 'registration'
+        ? 'Entries are open. The clock starts only when you press start.'
+        : showing.phase === 'review'
+          ? 'Round over. Review the wallets below, then open registration for the next one.'
+          : 'Round is running. It ends by itself, or you can end it now.';
+  }
+
+  function tick() {
+    if (!round || !round.endsAt || round.phase === 'registration') {
+      el('clock').textContent = '—';
+      return;
+    }
+    el('clock').textContent = F.countdown(round.endsAt);
+  }
+
+  async function refresh() {
+    try {
+      var info = await F.api('/api/round');
+      paint(info);
+      await loadReview();
+    } catch (err) {
+      setState('controlState', err.message, 'bad');
+    }
+  }
+
+  function flagPill(flag) {
+    return '<span class="flag">' + flag.kind + '</span>';
+  }
+
+  async function loadReview() {
+    try {
+      var data = await api('/api/admin/review');
+      var rows = data.entries || [];
+      if (!rows.length) {
+        el('review').innerHTML = '';
+        setState('reviewState', 'No entries yet.');
+        return;
+      }
+      el('review').innerHTML = rows.map(function (e, i) {
+        var flags = (e.flags || []).map(flagPill).join(' ');
+        return '' +
+          '<div class="review-row">' +
+            '<div class="review-main">' +
+              '<span class="review-rank">' + (i + 1) + '</span>' +
+              '<a class="addr" href="' + F.SOLSCAN + e.address + '" target="_blank" rel="noopener">' + F.shortAddr(e.address) + '</a>' +
+              '<span class="review-pnl ' + (e.pnl < 0 ? 'down' : 'up') + '">' + F.money(e.pnl, true) + '</span>' +
+            '</div>' +
+            '<div class="review-meta">' +
+              'deposit ' + F.money(e.deposit) +
+              ' · trades ' + (e.trades || 0) +
+              (e.potShare ? ' · pot share ' + Math.round(e.potShare) + '%' : '') +
+              (e.holdVerified ? ' · holding checked' : ' · holding unverified') +
+              (e.compSigned ? '' : ' · address pasted, not signed') +
+              (e.firstFunder ? ' · funded by ' + F.shortAddr(e.firstFunder) : '') +
+            '</div>' +
+            (flags ? '<div class="review-flags">' + flags + '</div>' : '') +
+            '<div class="review-actions">' +
+              '<button class="ghost-link dq" data-id="' + e.id + '" type="button">Disqualify</button>' +
+            '</div>' +
+          '</div>';
+      }).join('');
+
+      var shared = data.sharedFunders || [];
+      setState(
+        'reviewState',
+        shared.length
+          ? 'Warning: ' + shared.length + ' funding source(s) paid for more than one entry — likely one person with several wallets.'
+          : 'Nothing suspicious in the funding sources.',
+        shared.length ? 'bad' : 'ok',
+      );
+
+      document.querySelectorAll('.dq').forEach(function (b) {
+        b.addEventListener('click', async function () {
+          var reason = prompt('Why is this wallet disqualified?');
+          if (!reason) return;
+          try {
+            await api('/api/admin/disqualify', { method: 'POST', body: JSON.stringify({ entryId: Number(b.dataset.id), reason: reason }) });
+            await refresh();
+          } catch (err) {
+            setState('reviewState', err.message, 'bad');
+          }
+        });
+      });
+    } catch (err) {
+      setState('reviewState', err.message, 'bad');
+    }
+  }
+
+  el('unlock').addEventListener('click', async function () {
+    token = el('token').value.trim();
+    if (!token) {
+      setState('lockState', 'Paste the token first.', 'bad');
+      return;
+    }
+    try {
+      await api('/api/admin/review');
+      save(token);
+      el('lock').hidden = true;
+      el('panel').hidden = false;
+      refresh();
+    } catch (err) {
+      setState('lockState', 'That token was refused.', 'bad');
+    }
+  });
+
+  el('btnCreate').addEventListener('click', async function () {
+    setState('controlState', 'Opening registration…');
+    try {
+      var r = await api('/api/admin/round/create', { method: 'POST', body: '{}' });
+      setState('controlState', 'Round ' + r.round.number + ' is open for entries. ' +
+        (r.snapshot && r.snapshot.ok ? r.snapshot.holders + ' eligible holders in the snapshot.' : 'Holder snapshot skipped: ' + (r.snapshot?.reason || 'no coin set')), 'ok');
+      refresh();
+    } catch (err) {
+      setState('controlState', err.message, 'bad');
+    }
+  });
+
+  el('btnStart').addEventListener('click', async function () {
+    if (!confirm('Start the round now? The 24 hour clock begins immediately and the deposit window opens.')) return;
+    setState('controlState', 'Starting…');
+    try {
+      var r = await api('/api/admin/round/start', { method: 'POST', body: JSON.stringify({ hours: 24 }) });
+      setState('controlState', 'Round ' + r.round.number + ' is live. It ends in 24 hours.', 'ok');
+      refresh();
+    } catch (err) {
+      setState('controlState', err.message, 'bad');
+    }
+  });
+
+  el('btnEnd').addEventListener('click', async function () {
+    if (!confirm('End the round now? Scores are frozen and the top three go to review.')) return;
+    try {
+      await api('/api/admin/round/end', { method: 'POST', body: '{}' });
+      setState('controlState', 'Round ended. Final scores are being frozen.', 'ok');
+      refresh();
+    } catch (err) {
+      setState('controlState', err.message, 'bad');
+    }
+  });
+
+  el('btnPot').addEventListener('click', async function () {
+    var value = Number(el('potInput').value);
+    if (!(value >= 0)) {
+      setState('potState', 'Enter a number.', 'bad');
+      return;
+    }
+    try {
+      var showing = round || {};
+      await api('/api/admin/pot', { method: 'POST', body: JSON.stringify({ round: showing.number, potUsd: value }) });
+      setState('potState', 'Pot set to ' + F.money(value) + '.', 'ok');
+      refresh();
+    } catch (err) {
+      setState('potState', err.message, 'bad');
+    }
+  });
+
+  /* Already unlocked in this tab? */
+  (function () {
+    var saved = load();
+    if (!saved) return;
+    token = saved;
+    api('/api/admin/review')
+      .then(function () {
+        el('lock').hidden = true;
+        el('panel').hidden = false;
+        refresh();
+      })
+      .catch(function () { token = ''; });
+  })();
+
+  setInterval(function () { if (token) refresh(); }, 60000);
+  setInterval(tick, 1000);
+
+  var nav = el('nav');
+  var toggle = el('navToggle');
+  toggle.addEventListener('click', function () {
+    var open = nav.classList.toggle('open');
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+  });
+})();
+</script>
+</body>
+</html>

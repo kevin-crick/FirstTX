@@ -1,11 +1,17 @@
-/* Round lifecycle.
+/* Round lifecycle — manually controlled.
 
-   registration opens (snapshot)  -> opens_at - REGISTRATION_LEAD_HOURS
-   round starts / deposits open   -> opens_at        (00:00 UTC)
-   deposits close                 -> + DEPOSIT_WINDOW_HOURS
-   round ends                     -> opens_at + 24h
-   then: review -> settled
-*/
+   You decide when things happen, from the admin panel:
+
+     create   -> status 'registration'. Holder snapshot is taken now, and
+                 people can enter. No clock is running.
+     start    -> status 'live'. The 24 hour clock starts at that moment, and
+                 the deposit window opens for the first hour.
+     (auto)   -> 24 hours later the round flips to 'review' by itself and the
+                 final scores are frozen.
+     end      -> same thing, early, if you want to stop a round sooner.
+
+   Nothing is scheduled by the calendar; a round only exists because you made
+   one, and only runs because you pressed start. */
 
 import { config } from './config.js';
 import { queryOne, queryAll, run, now } from './db.js';
@@ -14,103 +20,115 @@ import { getPrices } from './prices.js';
 
 const DAY = 86_400;
 
-/** UTC timestamp of the round start for the day `date` falls in. */
-function startOfRoundUtc(date) {
-  const d = new Date(date);
-  return Math.floor(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), config.roundStartHour, 0, 0) / 1000);
-}
+/* ------------------------------------------------------------- lifecycle */
 
-function buildRound(number, opensAt) {
-  return {
-    number,
-    snapshot_at: opensAt - config.registrationLeadHours * 3600,
-    opens_at: opensAt,
-    deposit_closes_at: opensAt + config.depositWindowHours * 3600,
-    ends_at: opensAt + DAY,
-  };
-}
+/** Open registration for a new round. Fails if one is already open. */
+export function createRound() {
+  refreshStatuses(); // a round whose clock has run out is no longer live
+  const open = queryOne(`SELECT * FROM rounds WHERE status = 'registration' ORDER BY number DESC LIMIT 1`);
+  if (open) return { ok: false, reason: `round ${open.number} is already open for registration`, round: open };
 
-function insertRound(round) {
+  const live = queryOne(`SELECT * FROM rounds WHERE status = 'live' ORDER BY number DESC LIMIT 1`);
+  if (live) return { ok: false, reason: `round ${live.number} is still running`, round: live };
+
+  const last = queryOne('SELECT number FROM rounds ORDER BY number DESC LIMIT 1');
+  const number = (last?.number ?? 0) + 1;
+
   run(
-    `INSERT OR IGNORE INTO rounds
-       (number, snapshot_at, opens_at, deposit_closes_at, ends_at, status, coin_mint, created_at)
-     VALUES (?, ?, ?, ?, ?, 'upcoming', ?, ?)`,
-    round.number,
-    round.snapshot_at,
-    round.opens_at,
-    round.deposit_closes_at,
-    round.ends_at,
+    `INSERT INTO rounds (number, snapshot_at, opens_at, deposit_closes_at, ends_at, status, coin_mint, created_at)
+     VALUES (?, ?, 0, 0, 0, 'registration', ?, ?)`,
+    number,
+    now(),
     config.coinMint || null,
     now(),
   );
-  return queryOne('SELECT * FROM rounds WHERE number = ?', round.number);
+
+  return { ok: true, round: queryOne('SELECT * FROM rounds WHERE number = ?', number) };
 }
 
-/** Make sure today's and tomorrow's rounds exist, and keep statuses current. */
-export function ensureRounds() {
-  const nowTs = now();
-  let todayStart = startOfRoundUtc(nowTs * 1000);
-  if (todayStart > nowTs) todayStart -= DAY; // before the daily start hour
-
-  const last = queryOne('SELECT number, opens_at FROM rounds ORDER BY number DESC LIMIT 1');
-  let number = last ? last.number : 1;
-  let opensAt = last ? last.opens_at : todayStart;
-
-  if (!last) insertRound(buildRound(number, opensAt));
-
-  /* Fill forward until tomorrow's round exists. */
-  while (opensAt < todayStart + DAY) {
-    number += 1;
-    opensAt += DAY;
-    insertRound(buildRound(number, opensAt));
-  }
-
+/** Start the open round: 24 hours from this moment. */
+export function startRound(hours = 24) {
   refreshStatuses();
-  return currentRound();
+  const round = queryOne(`SELECT * FROM rounds WHERE status = 'registration' ORDER BY number DESC LIMIT 1`);
+  if (!round) return { ok: false, reason: 'no round is open for registration' };
+
+  /* Two rounds running at once would split the field and the pot. */
+  const live = queryOne(`SELECT number FROM rounds WHERE status = 'live' ORDER BY number DESC LIMIT 1`);
+  if (live) return { ok: false, reason: `round ${live.number} is still running — end it first` };
+
+  const startedAt = now();
+  run(
+    `UPDATE rounds SET status = 'live', opens_at = ?, deposit_closes_at = ?, ends_at = ? WHERE id = ?`,
+    startedAt,
+    startedAt + Math.round(config.depositWindowHours * 3600),
+    startedAt + Math.round(hours * 3600),
+    round.id,
+  );
+
+  return { ok: true, round: queryOne('SELECT * FROM rounds WHERE id = ?', round.id) };
 }
 
+/** Stop a running round now, instead of waiting for the clock. */
+export function endRound() {
+  const round = queryOne(`SELECT * FROM rounds WHERE status = 'live' ORDER BY number DESC LIMIT 1`);
+  if (!round) return { ok: false, reason: 'no round is running' };
+  run(`UPDATE rounds SET ends_at = ? WHERE id = ?`, now(), round.id);
+  return { ok: true, round: queryOne('SELECT * FROM rounds WHERE id = ?', round.id) };
+}
+
+/** Flip a finished round to review. Called on every indexer pass. */
 export function refreshStatuses() {
-  const nowTs = now();
-  run(`UPDATE rounds SET status = 'registration' WHERE status = 'upcoming'  AND ? >= snapshot_at AND ? < opens_at`, nowTs, nowTs);
-  run(`UPDATE rounds SET status = 'live'         WHERE status IN ('upcoming','registration') AND ? >= opens_at AND ? < ends_at`, nowTs, nowTs);
-  run(`UPDATE rounds SET status = 'review'       WHERE status = 'live'      AND ? >= ends_at`, nowTs);
+  run(`UPDATE rounds SET status = 'review' WHERE status = 'live' AND ends_at > 0 AND ? >= ends_at`, now());
 }
 
-/** The round people are currently looking at: the live one, else the next one. */
+/* --------------------------------------------------------------- lookups */
+
+/** The round the site should show: the running one, else the one taking entries. */
 export function currentRound() {
-  const nowTs = now();
   return (
-    queryOne(`SELECT * FROM rounds WHERE ? >= opens_at AND ? < ends_at ORDER BY number DESC LIMIT 1`, nowTs, nowTs) ||
-    queryOne(`SELECT * FROM rounds WHERE opens_at > ? ORDER BY number ASC LIMIT 1`, nowTs) ||
+    queryOne(`SELECT * FROM rounds WHERE status = 'live' ORDER BY number DESC LIMIT 1`) ||
+    queryOne(`SELECT * FROM rounds WHERE status = 'registration' ORDER BY number DESC LIMIT 1`) ||
     queryOne(`SELECT * FROM rounds ORDER BY number DESC LIMIT 1`)
   );
 }
 
-/** The round currently accepting registrations, if any. */
+/** The round accepting entries: one open for registration, or a live round still inside its deposit window. */
 export function registrationRound() {
-  const nowTs = now();
+  const open = queryOne(`SELECT * FROM rounds WHERE status = 'registration' ORDER BY number DESC LIMIT 1`);
+  if (open) return open;
   return queryOne(
-    `SELECT * FROM rounds
-      WHERE ? >= snapshot_at AND ? < deposit_closes_at
-      ORDER BY number ASC LIMIT 1`,
-    nowTs,
-    nowTs,
+    `SELECT * FROM rounds WHERE status = 'live' AND deposit_closes_at > ? ORDER BY number DESC LIMIT 1`,
+    now(),
   );
 }
 
 export function phaseOf(round, nowTs = now()) {
   if (!round) return 'none';
-  if (nowTs < round.snapshot_at) return 'upcoming';
-  if (nowTs < round.opens_at) return 'registration';
-  if (nowTs < round.deposit_closes_at) return 'deposit-window';
-  if (nowTs < round.ends_at) return 'trading';
+  if (round.status === 'registration') return 'registration';
   if (round.status === 'settled') return 'settled';
-  return 'review';
+  if (round.status === 'review') return 'review';
+  if (round.status === 'live') {
+    /* The end of the round wins: ending early closes the deposit window too. */
+    if (round.ends_at > 0 && nowTs >= round.ends_at) return 'review';
+    if (nowTs < round.deposit_closes_at) return 'deposit-window';
+    return 'trading';
+  }
+  return round.status;
 }
 
+/** Make sure there is at least one round to look at on a brand-new database. */
+export function ensureRounds() {
+  const any = queryOne('SELECT id FROM rounds LIMIT 1');
+  if (!any) createRound();
+  refreshStatuses();
+  return currentRound();
+}
+
+/* -------------------------------------------------------------- snapshot */
+
 /**
- * Take the holder snapshot for a round: who held the coin, and how much,
- * at the moment registration opened.
+ * Who held the coin, and how much, at the moment registration opened.
+ * Taken once per round, when the round is created.
  */
 export async function takeSnapshot(roundId) {
   const round = queryOne('SELECT * FROM rounds WHERE id = ?', roundId);
@@ -123,14 +141,12 @@ export async function takeSnapshot(roundId) {
 
   let holders;
   try {
-    /* Helius has a purpose-built holder call; everything else falls back to
-       scanning the token program. */
     holders = /helius/i.test(config.rpcUrl)
       ? await getMintHoldersViaDas(config.coinMint)
       : await getMintHolders(config.coinMint);
   } catch (err) {
     run(`UPDATE rounds SET snapshot_status = 'failed' WHERE id = ?`, roundId);
-    return { ok: false, reason: `snapshot call failed: ${err.message}. A paid RPC endpoint is needed for this.` };
+    return { ok: false, reason: `snapshot call failed: ${err.message}` };
   }
 
   const prices = await getPrices([config.coinMint]);
@@ -141,7 +157,7 @@ export async function takeSnapshot(roundId) {
   let kept = 0;
   for (const [owner, amount] of holders) {
     const usd = amount * price;
-    if (usd < config.minHoldUsd) continue; // only eligible holders are worth storing
+    if (usd < config.minHoldUsd) continue;
     run(insert, roundId, owner, amount, usd);
     kept += 1;
   }
@@ -154,11 +170,9 @@ export function holderSnapshotEntry(roundId, owner) {
   return queryOne('SELECT * FROM snapshot_holders WHERE round_id = ? AND owner = ?', roundId, owner);
 }
 
+/** Rounds open for registration whose snapshot has not been taken yet. */
 export function roundsNeedingSnapshot() {
-  const nowTs = now();
-  return queryAll(
-    `SELECT * FROM rounds WHERE snapshot_status = 'pending' AND ? >= snapshot_at AND ? < ends_at`,
-    nowTs,
-    nowTs,
-  );
+  return queryAll(`SELECT * FROM rounds WHERE snapshot_status = 'pending' AND status IN ('registration', 'live')`);
 }
+
+export { DAY };

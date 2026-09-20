@@ -2,7 +2,17 @@
 
 import { config } from './config.js';
 import { queryAll, queryOne, run, now } from './db.js';
-import { currentRound, registrationRound, phaseOf, ensureRounds, takeSnapshot } from './rounds.js';
+import {
+  currentRound,
+  registrationRound,
+  phaseOf,
+  ensureRounds,
+  takeSnapshot,
+  createRound,
+  startRound,
+  endRound,
+  refreshStatuses,
+} from './rounds.js';
 import { issueNonce, register, RegistrationError } from './registration.js';
 import { finalizeRound } from './indexer.js';
 
@@ -128,6 +138,7 @@ export async function handleRequest(req, res) {
     }
 
     if (req.method === 'GET' && path === '/api/round') {
+      refreshStatuses(); // so a finished round reads as finished straight away
       return json(res, 200, { round: roundPayload(currentRound()), registration: roundPayload(registrationRound()) });
     }
 
@@ -294,6 +305,43 @@ export async function handleRequest(req, res) {
       if (req.method === 'POST' && path === '/api/admin/rounds') {
         ensureRounds();
         return json(res, 200, { ok: true, rounds: queryAll('SELECT number, status, opens_at, ends_at FROM rounds ORDER BY number DESC LIMIT 5') });
+      }
+
+      /* --- round control: you decide when a round opens and starts --- */
+
+      if (req.method === 'POST' && path === '/api/admin/round/create') {
+        const result = createRound();
+        if (!result.ok) return json(res, 409, { error: result.reason });
+        /* Take the holder snapshot straight away, so entries can be checked. */
+        const snapshot = await takeSnapshot(result.round.id);
+        return json(res, 201, { ok: true, round: roundPayload(result.round), snapshot });
+      }
+
+      if (req.method === 'POST' && path === '/api/admin/round/start') {
+        const body = await readJsonBody(req);
+        const hours = Number(body.hours) > 0 ? Number(body.hours) : 24;
+        const result = startRound(hours);
+        if (!result.ok) return json(res, 409, { error: result.reason });
+        return json(res, 200, { ok: true, round: roundPayload(result.round) });
+      }
+
+      if (req.method === 'POST' && path === '/api/admin/round/end') {
+        const result = endRound();
+        if (!result.ok) return json(res, 409, { error: result.reason });
+        return json(res, 200, { ok: true, round: roundPayload(result.round) });
+      }
+
+      if (req.method === 'GET' && path === '/api/admin/rounds/list') {
+        return json(res, 200, {
+          rounds: queryAll(
+            `SELECT r.number, r.status, r.opens_at AS opensAt, r.deposit_closes_at AS depositClosesAt,
+                    r.ends_at AS endsAt, r.pot_usd AS potUsd, r.snapshot_status AS snapshotStatus,
+                    r.snapshot_holders AS snapshotHolders,
+                    (SELECT COUNT(*) FROM entries e WHERE e.round_id = r.id AND e.status = 'active') AS entered
+               FROM rounds r ORDER BY r.number DESC LIMIT 20`,
+          ),
+          serverTime: now(),
+        });
       }
     }
 

@@ -77,7 +77,7 @@
   </div>
 
   <div class="cta-band">
-    <p>Rounds run midnight to midnight UTC. Registration opens the day before.</p>
+    <p>Each round runs 24 hours from the moment it starts. Enter while registration is open.</p>
     <a class="pill pill-lg" href="enter.html">Enter Round</a>
   </div>
 
@@ -164,7 +164,7 @@
 
   var PHASE_TEXT = {
     upcoming: 'Registration has not opened yet',
-    registration: 'Registration is open',
+    registration: 'Entries open, not started',
     'deposit-window': 'Deposit window is open',
     trading: 'Live',
     review: 'Round over, top three under review',
@@ -179,17 +179,21 @@
     document.getElementById('entered').textContent = (round.walletsEntered || 0).toLocaleString('en-US');
     document.getElementById('capNote').textContent = 'Deposit cap ' + F.money(round.depositCapUsd) + ' per wallet';
 
-    var startingSoon = round.phase === 'upcoming' || round.phase === 'registration';
-    document.getElementById('clockLabel').textContent = startingSoon ? 'Round starts in' : 'Round ends in';
-    document.getElementById('clockNote').textContent = startingSoon
-      ? 'Deposit window opens with the round'
-      : 'Next round opens straight after';
+    var notStarted = round.phase === 'upcoming' || round.phase === 'registration';
+    document.getElementById('clockLabel').textContent = notStarted ? 'Round starts' : 'Round ends in';
+    document.getElementById('clockNote').textContent = notStarted
+      ? 'Entries are open now — the clock starts at launch'
+      : 'Runs 24 hours from the start';
   }
 
   function tick() {
     if (!round) return;
-    var target = round.phase === 'upcoming' || round.phase === 'registration' ? round.opensAt : round.endsAt;
-    document.getElementById('countdown').textContent = F.countdown(target);
+    /* A round only has a clock once it is started by hand. */
+    if (round.phase === 'registration' || round.phase === 'upcoming' || !round.endsAt) {
+      document.getElementById('countdown').textContent = '—';
+      return;
+    }
+    document.getElementById('countdown').textContent = F.countdown(round.endsAt);
   }
 
   async function load() {

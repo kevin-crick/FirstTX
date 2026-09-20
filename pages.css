@@ -418,6 +418,41 @@ h1 {
   margin: 10px 0 14px;
   min-height: 20px;
 }
+/* ---------- Admin ---------- */
+.admin-block { padding: 28px 0; border-top: 1px solid var(--line); }
+.admin-block h2 {
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 10px;
+}
+.admin-help { font-size: 15px; color: var(--muted); margin-bottom: 18px; }
+.admin-actions { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
+.admin-actions .addr-input { margin: 0; }
+.admin-actions .pill[disabled] { opacity: .35; cursor: not-allowed; }
+.admin-actions .ghost-link { font-size: 15px; }
+.admin-actions .ghost-link[disabled] { opacity: .35; cursor: not-allowed; }
+
+.review-row { padding: 16px 0; border-top: 1px solid var(--line); }
+.review-row:first-child { border-top: 0; }
+.review-main { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+.review-rank { font-size: 15px; color: var(--dim); min-width: 18px; }
+.review-pnl { margin-left: auto; font-size: 17px; font-variant-numeric: tabular-nums; }
+.review-pnl.up { color: var(--up); }
+.review-pnl.down { color: var(--down); }
+.review-meta { margin-top: 6px; font-size: 13px; color: var(--dim); }
+.review-flags { margin-top: 8px; display: flex; gap: 8px; flex-wrap: wrap; }
+.flag {
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(246,210,210,.12);
+  color: var(--down);
+}
+.review-actions { margin-top: 10px; }
+
 .entered-card {
   border: 1px solid var(--line-strong);
   border-radius: 14px;

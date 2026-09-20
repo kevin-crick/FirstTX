@@ -28,6 +28,9 @@ async function tick() {
     if (!round) return;
     const phase = phaseOf(round);
 
+    /* Nothing to score until you start the round. */
+    if (phase === 'registration') return;
+
     if (phase === 'deposit-window' || phase === 'trading') {
       const results = await indexRound(round);
       const errors = results.filter((r) => r.error);
@@ -56,6 +59,7 @@ async function tick() {
 ensureRounds();
 const round = currentRound();
 log(`FirstTX backend starting — round ${round?.number} (${phaseOf(round)})`);
+log('Rounds are started by hand from the admin panel.');
 if (!config.coinMint) log('WARNING: COIN_MINT is not set, so the $25 holding requirement is skipped.');
 if (!config.adminToken) log('WARNING: ADMIN_TOKEN is not set, so admin endpoints are disabled.');
 
