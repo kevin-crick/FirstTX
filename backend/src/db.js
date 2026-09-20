@@ -132,6 +132,13 @@ addColumnIfMissing('entries', 'comp_signed', 'INTEGER NOT NULL DEFAULT 0');
    before the round started. */
 addColumnIfMissing('entries', 'deposit_deadline', 'INTEGER NOT NULL DEFAULT 0');
 
+/* Fee tracking: the pot can be worked out from what the coin earns while a
+   round runs, instead of being typed in by hand. */
+addColumnIfMissing('rounds', 'fees_usd', 'REAL NOT NULL DEFAULT 0');
+addColumnIfMissing('rounds', 'fee_cursor', 'TEXT');
+addColumnIfMissing('rounds', 'pot_source', "TEXT NOT NULL DEFAULT 'manual'");
+addColumnIfMissing('rounds', 'ended_at', 'INTEGER');
+
 export const now = () => Math.floor(Date.now() / 1000);
 
 export const queryAll = (sql, ...params) => db.prepare(sql).all(...params);

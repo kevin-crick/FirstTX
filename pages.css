@@ -418,6 +418,63 @@ h1 {
   margin: 10px 0 14px;
   min-height: 20px;
 }
+/* ---------- Past rounds ---------- */
+.hist-round { padding: 22px 0; border-top: 1px solid var(--line); }
+.hist-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.hist-number { font-size: 18px; }
+.hist-meta { font-size: 13px; color: var(--dim); }
+.hist-winner {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 120px 110px auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 10px;
+  border-radius: 10px;
+  transition: background .2s var(--ease);
+}
+.hist-winner:hover { background: rgba(255,255,255,.03); }
+.hist-winner .addr { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.hist-winner .addr:hover { color: #fff; }
+.paid:hover { color: var(--up); }
+.hist-pnl { text-align: right; font-size: 16px; font-variant-numeric: tabular-nums; }
+.hist-pnl.up { color: var(--up); }
+.hist-pnl.down { color: var(--down); }
+.hist-share { text-align: right; font-size: 13px; color: var(--muted); }
+.paid { font-size: 13px; color: var(--ink); justify-self: end; white-space: nowrap; }
+.paid.pending { color: var(--dim); }
+.hist-none { font-size: 15px; color: var(--muted); padding: 8px 10px; }
+
+@media (max-width: 820px) {
+  .hist-winner {
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    grid-template-areas: "rank addr pnl" ". meta meta";
+    row-gap: 6px;
+  }
+  .hist-winner .rank { grid-area: rank; }
+  .hist-winner .addr { grid-area: addr; }
+  .hist-pnl { grid-area: pnl; }
+  .hist-share, .paid { grid-area: meta; justify-self: start; text-align: left; display: inline; margin-right: 12px; }
+}
+
+/* ---------- Share card ---------- */
+.share-card { margin: 26px 0 0; }
+.share-card canvas {
+  width: 100%;
+  max-width: 560px;
+  height: auto;
+  border-radius: 14px;
+  border: 1px solid var(--line);
+  display: block;
+}
+.share-actions { margin-top: 16px; display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
+
 /* ---------- Admin ---------- */
 .admin-block { padding: 28px 0; border-top: 1px solid var(--line); }
 .admin-block h2 {

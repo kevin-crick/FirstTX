@@ -17,6 +17,7 @@
     <a class="brand" href="index.html" aria-label="FirstTX home"><img src="logo.png" alt="FirstTX"></a>
     <nav class="nav" id="nav" aria-label="Primary">
       <a href="leaderboard.html">Leaderboard</a>
+      <a href="history.html">Past rounds</a>
       <a href="rules.html">Rules</a>
       <a href="faq.html">FAQ</a>
       <a href="https://x.com/tryfirsttx" target="_blank" rel="noopener">X</a>
@@ -46,7 +47,7 @@
       <div class="round-cell">
         <p class="round-label">Rank</p>
         <p class="round-value" id="rank">—</p>
-        <p class="round-note" id="rankNote">Updated every 5 minutes</p>
+        <p class="round-note" id="rankNote">Updated every minute</p>
       </div>
     </div>
 
@@ -66,6 +67,15 @@
       <div class="fact"><span class="k">Pot share</span><span class="v" id="share">—</span></div>
       <div class="fact"><span class="k">Round</span><span class="v" id="round">—</span></div>
       <div class="fact"><span class="k">Status</span><span class="v" id="status">—</span></div>
+    </div>
+
+    <div class="share-card">
+      <canvas id="card" width="1200" height="630" aria-label="Shareable result card"></canvas>
+      <div class="share-actions">
+        <a class="pill pill-lg" id="shareX" href="#" target="_blank" rel="noopener">Share on X</a>
+        <button class="ghost-link" id="downloadCard" type="button">Download image</button>
+        <span class="state" id="shareState"></span>
+      </div>
     </div>
 
     <div class="cta-band">
@@ -94,6 +104,7 @@
   var F = window.FIRSTTX;
   var el = function (id) { return document.getElementById(id); };
   var address = new URLSearchParams(location.search).get('address') || '';
+  var shareReady = false;
 
   function drawChart(history) {
     var box = el('chart');
@@ -141,6 +152,96 @@
     el('range').textContent = time(first) + ' – ' + time(last);
   }
 
+  /* The share card is drawn rather than screenshotted, so it downloads as a
+     real image and looks the same everywhere. */
+  function drawCard(w) {
+    var canvas = document.getElementById('card');
+    var ctx = canvas.getContext('2d');
+    var W = canvas.width;
+    var H = canvas.height;
+    var up = w.pnl >= 0;
+
+    ctx.fillStyle = '#050505';
+    ctx.fillRect(0, 0, W, H);
+
+    /* A soft wash behind the number, tinted by the result. */
+    var glow = ctx.createRadialGradient(W * 0.72, H * 0.3, 0, W * 0.72, H * 0.3, W * 0.55);
+    glow.addColorStop(0, up ? 'rgba(216,249,228,.10)' : 'rgba(246,210,210,.10)');
+    glow.addColorStop(1, 'rgba(5,5,5,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, W, H);
+
+    ctx.strokeStyle = 'rgba(255,255,255,.12)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(1, 1, W - 2, H - 2);
+
+    var logo = new Image();
+    logo.onload = function () {
+      ctx.drawImage(logo, 72, 62, 74, 74);
+      finish();
+    };
+    logo.onerror = finish;
+    logo.src = 'logo.png';
+
+    function finish() {
+      ctx.fillStyle = '#fafafa';
+      ctx.font = '500 34px Manrope, sans-serif';
+      ctx.fillText('FirstTX', 166, 112);
+
+      ctx.fillStyle = '#6f6e6e';
+      ctx.font = '400 24px Manrope, sans-serif';
+      ctx.fillText('Round ' + String(w.round).padStart(3, '0'), W - 72 - ctx.measureText('Round ' + String(w.round).padStart(3, '0')).width, 112);
+
+      ctx.fillStyle = '#a7a6a6';
+      ctx.font = '400 30px Manrope, sans-serif';
+      ctx.fillText(w.rank ? 'Finished #' + w.rank : 'Trading now', 72, 250);
+
+      ctx.fillStyle = up ? '#d8f9e4' : '#f6d2d2';
+      ctx.font = '400 132px Manrope, sans-serif';
+      ctx.fillText(F.money(w.pnl, true), 72, 380);
+
+      ctx.fillStyle = '#a7a6a6';
+      ctx.font = '400 30px Manrope, sans-serif';
+      ctx.fillText(
+        (w.deposit ? F.pct(w.roi) + ' on ' + F.money(w.deposit) : 'Not funded yet') +
+          (w.trades ? '   ·   ' + w.trades + ' trades' : ''),
+        72,
+        442,
+      );
+
+      ctx.fillStyle = '#6f6e6e';
+      ctx.font = '400 26px ui-monospace, Menlo, Consolas, monospace';
+      ctx.fillText(F.shortAddr(address), 72, H - 96);
+
+      ctx.fillStyle = '#8b8a8a';
+      ctx.font = '400 26px Manrope, sans-serif';
+      var tag = 'Fresh wallet. 24 hours. firsttx.netlify.app';
+      ctx.fillText(tag, W - 72 - ctx.measureText(tag).width, H - 96);
+    }
+  }
+
+  function setupShare(w) {
+    var text =
+      (w.rank ? 'Finished #' + w.rank + ' in FirstTX round ' + String(w.round).padStart(3, '0') : 'My FirstTX round') +
+      ': ' + F.money(w.pnl, true) + (w.deposit ? ' (' + F.pct(w.roi) + ')' : '') +
+      ' from a wallet that started empty.';
+    var url = location.origin + '/wallet.html?address=' + encodeURIComponent(address);
+    document.getElementById('shareX').href =
+      'https://x.com/intent/tweet?text=' + encodeURIComponent(text) + '&url=' + encodeURIComponent(url);
+
+    document.getElementById('downloadCard').addEventListener('click', function () {
+      try {
+        var link = document.createElement('a');
+        link.download = 'firsttx-round-' + w.round + '-' + address.slice(0, 6) + '.png';
+        link.href = document.getElementById('card').toDataURL('image/png');
+        link.click();
+        document.getElementById('shareState').textContent = 'Image saved.';
+      } catch (err) {
+        document.getElementById('shareState').textContent = 'Could not save the image here — screenshot it instead.';
+      }
+    });
+  }
+
   async function load() {
     if (!address) {
       el('sub').textContent = 'No wallet was given.';
@@ -177,6 +278,11 @@
       el('solscan').href = w.solscan || (F.SOLSCAN + address);
 
       drawChart(w.history || []);
+      if (!shareReady) {
+        drawCard(w);
+        setupShare(w);
+        shareReady = true;
+      }
       el('panel').hidden = false;
     } catch (err) {
       el('sub').textContent = 'This wallet has no entry yet.';

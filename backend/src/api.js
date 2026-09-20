@@ -15,6 +15,7 @@ import {
 } from './rounds.js';
 import { issueNonce, register, RegistrationError } from './registration.js';
 import { finalizeRound } from './indexer.js';
+import { startFeeTracking, feeSummary } from './fees.js';
 
 const json = (res, status, body) => {
   const payload = JSON.stringify(body);
@@ -81,6 +82,8 @@ function roundPayload(round) {
     depositClosesAt: round.deposit_closes_at,
     endsAt: round.ends_at,
     potUsd: round.pot_usd,
+    potSource: round.pot_source || 'manual',
+    feesUsd: round.fees_usd ?? 0,
     walletsEntered: entered?.n ?? 0,
     depositCapUsd: config.depositCapUsd,
     minHoldUsd: config.minHoldUsd,
@@ -183,6 +186,49 @@ export async function handleRequest(req, res) {
       });
     }
 
+    /* Past rounds, with their winners and payout transactions. */
+    if (req.method === 'GET' && path === '/api/history') {
+      const rounds = queryAll(
+        `SELECT * FROM rounds WHERE status IN ('review','settled') ORDER BY number DESC LIMIT 50`,
+      );
+      return json(res, 200, {
+        rounds: rounds.map((round) => {
+          const winners = queryAll(
+            `SELECT e.comp_wallet, e.pnl_usd, e.roi_pct, e.trades, e.final_rank, e.pot_share_pct,
+                    p.amount_usd AS paidUsd, p.signature AS payoutSignature
+               FROM entries e
+               LEFT JOIN payouts p ON p.entry_id = e.id
+              WHERE e.round_id = ? AND e.status = 'active' AND e.final_rank IS NOT NULL
+              ORDER BY e.final_rank ASC LIMIT 3`,
+            round.id,
+          );
+          const entered = queryOne(
+            `SELECT COUNT(*) AS n FROM entries WHERE round_id = ? AND status = 'active'`,
+            round.id,
+          );
+          return {
+            number: round.number,
+            status: round.status,
+            startedAt: round.opens_at,
+            endedAt: round.ends_at,
+            potUsd: round.pot_usd,
+            feesUsd: round.fees_usd ?? 0,
+            walletsEntered: entered?.n ?? 0,
+            winners: winners.map((w) => ({
+              rank: w.final_rank,
+              address: w.comp_wallet,
+              pnl: w.pnl_usd,
+              roi: w.roi_pct,
+              trades: w.trades,
+              potShare: w.pot_share_pct,
+              paidUsd: w.paidUsd,
+              payoutSignature: w.payoutSignature,
+            })),
+          };
+        }),
+      });
+    }
+
     if (req.method === 'GET' && path === '/api/nonce') {
       if (rateLimited(req, config.rateLimitPerMinute * 3)) return json(res, 429, { error: 'slow down' });
       return json(res, 200, { nonce: issueNonce(), expiresInSeconds: 600 });
@@ -203,6 +249,10 @@ export async function handleRequest(req, res) {
     /* ----------------------------------------------------------- admin */
     if (path.startsWith('/api/admin/')) {
       if (!isAdmin(req)) return json(res, 401, { error: 'admin token required' });
+
+      if (req.method === 'GET' && path === '/api/admin/fees') {
+        return json(res, 200, feeSummary(currentRound()));
+      }
 
       if (req.method === 'GET' && path === '/api/admin/review') {
         const round = url.searchParams.get('round')
@@ -260,8 +310,16 @@ export async function handleRequest(req, res) {
         const body = await readJsonBody(req);
         const round = queryOne('SELECT * FROM rounds WHERE number = ?', Number(body.round));
         if (!round) return json(res, 404, { error: 'round not found' });
-        run('UPDATE rounds SET pot_usd = ? WHERE id = ?', Number(body.potUsd) || 0, round.id);
-        return json(res, 200, { ok: true, potUsd: Number(body.potUsd) || 0 });
+        if (body.auto) {
+          /* Hand the pot back to the fee tracker. */
+          run(`UPDATE rounds SET pot_source = 'auto' WHERE id = ?`, round.id);
+          const fresh = queryOne('SELECT * FROM rounds WHERE id = ?', round.id);
+          const potUsd = (fresh.fees_usd * config.potPercent) / 100;
+          run('UPDATE rounds SET pot_usd = ? WHERE id = ?', potUsd, round.id);
+          return json(res, 200, { ok: true, potUsd, source: 'auto' });
+        }
+        run(`UPDATE rounds SET pot_usd = ?, pot_source = 'manual' WHERE id = ?`, Number(body.potUsd) || 0, round.id);
+        return json(res, 200, { ok: true, potUsd: Number(body.potUsd) || 0, source: 'manual' });
       }
 
       if (req.method === 'POST' && path === '/api/admin/finalize') {
@@ -322,7 +380,12 @@ export async function handleRequest(req, res) {
         const hours = Number(body.hours) > 0 ? Number(body.hours) : 24;
         const result = startRound(hours);
         if (!result.ok) return json(res, 409, { error: result.reason });
-        return json(res, 200, { ok: true, round: roundPayload(result.round) });
+        /* Fees earned from here on belong to this round's pot. */
+        await startFeeTracking(result.round);
+        return json(res, 200, {
+          ok: true,
+          round: roundPayload(queryOne('SELECT * FROM rounds WHERE id = ?', result.round.id)),
+        });
       }
 
       if (req.method === 'POST' && path === '/api/admin/round/end') {

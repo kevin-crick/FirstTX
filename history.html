@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Past rounds · FirstTX</title>
+<link rel="icon" type="image/png" href="favicon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200..800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="pages.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="site-head">
+    <a class="brand" href="index.html" aria-label="FirstTX home"><img src="logo.png" alt="FirstTX"></a>
+    <nav class="nav" id="nav" aria-label="Primary">
+      <a href="leaderboard.html">Leaderboard</a>
+      <a class="on" href="history.html">Past rounds</a>
+      <a href="rules.html">Rules</a>
+      <a href="faq.html">FAQ</a>
+      <a href="https://x.com/tryfirsttx" target="_blank" rel="noopener">X</a>
+    </nav>
+    <a class="pill head-cta" href="enter.html">Enter Round</a>
+    <button class="nav-toggle" id="navToggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="nav"><i></i></button>
+  </header>
+
+  <div class="page-head">
+    <p class="eyebrow">The record</p>
+    <h1>Past rounds</h1>
+    <p class="lede">Every finished round, who won it, and the transaction that paid them. Nothing here is editable after the fact — the payouts are on-chain.</p>
+  </div>
+
+  <div class="round-bar">
+    <div class="round-cell">
+      <p class="round-label">Rounds run</p>
+      <p class="round-value" id="totalRounds">—</p>
+      <p class="round-note">Since launch</p>
+    </div>
+    <div class="round-cell">
+      <p class="round-label">Paid out</p>
+      <p class="round-value" id="totalPaid">—</p>
+      <p class="round-note">Across every round</p>
+    </div>
+    <div class="round-cell">
+      <p class="round-label">Best single round</p>
+      <p class="round-value" id="bestPnl">—</p>
+      <p class="round-note" id="bestWho">No rounds finished yet</p>
+    </div>
+  </div>
+
+  <div id="rounds"></div>
+  <p class="empty" id="empty">No rounds have finished yet. The first one will appear here.</p>
+
+  <div class="cta-band">
+    <p>Watch the round that is running now, or enter the next one.</p>
+    <a class="pill pill-lg" href="leaderboard.html">View Leaderboard</a>
+  </div>
+
+  <footer class="site-foot">
+    <span>FirstTX</span>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="leaderboard.html">Leaderboard</a>
+      <a href="rules.html">Rules</a>
+      <a href="https://x.com/tryfirsttx" target="_blank" rel="noopener">X</a>
+    </nav>
+  </footer>
+
+</div>
+
+<script src="app.js"></script>
+<script>
+(function () {
+  var F = window.FIRSTTX;
+  var el = function (id) { return document.getElementById(id); };
+
+  function when(ts) {
+    if (!ts) return '';
+    return new Date(ts * 1000).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  function medal(rank) {
+    return '<span class="medal m' + rank + '">' + rank + '</span>';
+  }
+
+  function winnerRow(w) {
+    var paid = w.payoutSignature
+      ? '<a class="paid" href="https://solscan.io/tx/' + encodeURIComponent(w.payoutSignature) + '" target="_blank" rel="noopener">paid ' +
+        (w.paidUsd ? F.money(w.paidUsd) : '') + ' ↗</a>'
+      : '<span class="paid pending">payout pending</span>';
+    /* A row cannot be one big link: the payout link inside it would be
+       dropped by the browser. The address is the link instead. */
+    return '' +
+      '<div class="hist-winner">' +
+        '<span class="rank">' + medal(w.rank) + '</span>' +
+        '<a class="addr" href="wallet.html?address=' + encodeURIComponent(w.address) + '">' + F.shortAddr(w.address) + '</a>' +
+        '<span class="hist-pnl ' + (w.pnl < 0 ? 'down' : 'up') + '">' + F.money(w.pnl, true) + '</span>' +
+        '<span class="hist-share">' + (w.potShare ? Math.round(w.potShare) + '% of pot' : '—') + '</span>' +
+        paid +
+      '</div>';
+  }
+
+  async function load() {
+    try {
+      var data = await F.api('/api/history');
+      var rounds = data.rounds || [];
+
+      el('empty').hidden = rounds.length > 0;
+      el('totalRounds').textContent = rounds.length;
+
+      var paid = 0;
+      var best = null;
+      rounds.forEach(function (r) {
+        (r.winners || []).forEach(function (w) {
+          if (w.paidUsd) paid += w.paidUsd;
+          if (!best || w.pnl > best.pnl) best = { pnl: w.pnl, address: w.address, round: r.number };
+        });
+      });
+
+      el('totalPaid').textContent = F.money(paid);
+      el('bestPnl').textContent = best ? F.money(best.pnl, true) : '—';
+      el('bestWho').textContent = best
+        ? F.shortAddr(best.address) + ' in round ' + String(best.round).padStart(3, '0')
+        : 'No rounds finished yet';
+
+      el('rounds').innerHTML = rounds.map(function (r) {
+        var winners = (r.winners || []).map(winnerRow).join('');
+        return '' +
+          '<section class="hist-round">' +
+            '<div class="hist-head">' +
+              '<span class="hist-number">Round ' + String(r.number).padStart(3, '0') + '</span>' +
+              '<span class="hist-meta">' + when(r.startedAt) + ' · ' + r.walletsEntered + ' wallets · pot ' + F.money(r.potUsd) + '</span>' +
+            '</div>' +
+            (winners || '<p class="hist-none">Nobody finished in profit. The pot rolled over.</p>') +
+          '</section>';
+      }).join('');
+    } catch (err) {
+      el('empty').textContent = 'Past rounds are not available right now.';
+      el('empty').hidden = false;
+    }
+  }
+
+  load();
+
+  var nav = el('nav');
+  var toggle = el('navToggle');
+  toggle.addEventListener('click', function () {
+    var open = nav.classList.toggle('open');
+    toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    toggle.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+  });
+})();
+</script>
+</body>
+</html>

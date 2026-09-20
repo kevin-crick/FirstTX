@@ -5,6 +5,7 @@ import { config } from './config.js';
 import { handleRequest } from './api.js';
 import { ensureRounds, refreshStatuses, currentRound, roundsNeedingSnapshot, takeSnapshot, phaseOf } from './rounds.js';
 import { indexRound, finalizeRound } from './indexer.js';
+import { updateFees, feesEnabled } from './fees.js';
 import { queryOne, now } from './db.js';
 
 const log = (...args) => console.log(new Date().toISOString(), ...args);
@@ -30,6 +31,15 @@ async function tick() {
 
     /* Nothing to score until you start the round. */
     if (phase === 'registration') return;
+
+    /* Keep the pot in step with the fees the coin is earning. */
+    if (phase === 'trading') {
+      const fees = await updateFees(round).catch((err) => {
+        log('fee check failed:', err.message);
+        return null;
+      });
+      if (fees?.counted) log(`round ${round.number}: +${fees.counted} fee payment(s), pot now $${fees.potUsd.toFixed(2)}`);
+    }
 
     if (phase === 'trading') {
       const results = await indexRound(round);
@@ -67,6 +77,9 @@ log(`FirstTX backend starting — round ${round?.number} (${phaseOf(round)})`);
 log('Rounds are started by hand from the admin panel.');
 if (!config.coinMint) log('WARNING: COIN_MINT is not set, so the $25 holding requirement is skipped.');
 if (!config.adminToken) log('WARNING: ADMIN_TOKEN is not set, so admin endpoints are disabled.');
+log(feesEnabled()
+  ? `Pot is ${config.potPercent}% of fees arriving in ${config.feeWallet.slice(0, 6)}…${config.feeWallet.slice(-4)}.`
+  : 'Pot is set by hand (FEE_WALLET / POT_PERCENT are not set).');
 
 tick();
 setInterval(tick, Math.max(30, config.indexIntervalSeconds) * 1000);

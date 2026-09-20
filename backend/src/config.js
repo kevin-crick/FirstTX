@@ -34,6 +34,11 @@ export const config = {
   rpcUrl: process.env.RPC_URL || 'https://api.mainnet-beta.solana.com',
   coinMint: (process.env.COIN_MINT || '').trim(),
 
+  /* Where the coin's creator fees arrive, and how much of them goes into the
+     pot. Leave the wallet blank to set the pot by hand instead. */
+  feeWallet: (process.env.FEE_WALLET || '').trim(),
+  potPercent: num('POT_PERCENT', 0),
+
   minHoldUsd: num('MIN_HOLD_USD', 25),
   depositCapUsd: num('DEPOSIT_CAP_USD', 1000),
   /* There is no deposit window. The first money into a wallet is its starting
