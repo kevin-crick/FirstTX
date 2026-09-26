@@ -296,7 +296,17 @@
       el('panel').hidden = false;
       refresh();
     } catch (err) {
-      setState('lockState', 'That token was refused.', 'bad');
+      /* Only a 401 means the token is wrong. Anything else is the page not
+         reaching the server, which needs a different fix. */
+      setState(
+        'lockState',
+        /admin token required/i.test(err.message)
+          ? 'That token was refused.'
+          : location.protocol === 'file:'
+            ? 'This page was opened from your computer. Open it from firsttx.netlify.app/admin.html instead.'
+            : 'Could not reach the server (' + err.message + '). Try again in a minute, or in a private window.',
+        'bad',
+      );
     }
   });
 
