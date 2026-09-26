@@ -280,6 +280,7 @@ export async function handleRequest(req, res) {
             trades: entry.trades,
             potShare: entry.pot_share_pct,
             solscan: `https://solscan.io/account/${entry.comp_wallet}`,
+            payout: queryOne('SELECT amount_usd AS amountUsd, signature FROM payouts WHERE entry_id = ? ORDER BY id DESC LIMIT 1', entry.id) || null,
             flags: queryAll('SELECT kind, detail, signature, ts FROM flags WHERE entry_id = ?', entry.id),
             transfers: queryAll(
               `SELECT direction, counterpny AS counterparty, mint, amount, usd, block_time AS blockTime, signature
@@ -335,6 +336,8 @@ export async function handleRequest(req, res) {
         const body = await readJsonBody(req);
         const entry = queryOne('SELECT * FROM entries WHERE id = ?', Number(body.entryId));
         if (!entry) return json(res, 404, { error: 'entry not found' });
+        /* Recording again replaces the old record, so a typo can be fixed. */
+        run('DELETE FROM payouts WHERE entry_id = ?', entry.id);
         run(
           `INSERT INTO payouts (round_id, entry_id, rank, share_pct, amount_usd, signature, recorded_at)
            VALUES (?, ?, ?, ?, ?, ?, ?)`,

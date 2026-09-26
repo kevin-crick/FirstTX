@@ -77,17 +77,66 @@ function classifyTransaction(tx, wallet) {
     }
   }
 
-  /* A swap moves value both ways inside one transaction the wallet signed. */
+  /* A swap moves value both ways inside one transaction the wallet signed.
+     Instruction names only cover some venues, so the wallet's own balances
+     before and after are checked too: something went out and something else
+     came in. That catches pump.fun, PumpSwap and anything else without having
+     to know each program. */
   const logs = tx.meta?.logMessages || [];
   const swapLog = logs.some((l) => /Instruction: (Swap|Route|SharedAccountsRoute|ExactOutRoute)/i.test(l));
-  result.isSwap = walletSigns && (swapLog || (sawTokenIn && sawTokenOut));
+  const balances = balanceMoves(tx, wallet, accountKeys);
+  result.isSwap = walletSigns && (swapLog || (sawTokenIn && sawTokenOut) || (balances.gained && balances.lost));
   if (result.isSwap) {
-    /* Swap legs are not deposits or withdrawals. */
-    result.inbound = [];
+    /* Swap legs are not deposits or withdrawals. Money sent in by another
+       wallet that co-signed the transaction still is, so a top-up cannot be
+       hidden inside a trade. Pools never sign, people do. */
+    const otherSigners = new Set(
+      (message.accountKeys || [])
+        .filter((k) => typeof k === 'object' && k.signer && k.pubkey !== wallet)
+        .map((k) => k.pubkey),
+    );
+    result.inbound = result.inbound.filter((m) => m.counterparty && otherSigners.has(m.counterparty));
     result.outbound = [];
   }
 
   return result;
+}
+
+/* Below this, a SOL change is rent for a token account, not a trade leg. */
+const SOL_MOVE_THRESHOLD = 0.0025;
+
+/** Did the wallet end the transaction with more of one thing and less of another? */
+function balanceMoves(tx, wallet, accountKeys) {
+  const meta = tx.meta;
+  const change = new Map();
+  if (!meta) return { gained: false, lost: false };
+
+  const index = accountKeys.indexOf(wallet);
+  if (index >= 0 && meta.preBalances && meta.postBalances) {
+    let lamports = meta.postBalances[index] - meta.preBalances[index];
+    if (index === 0) lamports += meta.fee ?? 0; // the network fee is not a trade leg
+    change.set(SOL_MINT, lamports / 1e9);
+  }
+
+  /* Wrapped SOL shares SOL's mint, so it merges with native SOL here. */
+  const add = (list, sign) => {
+    for (const b of list || []) {
+      if (b.owner !== wallet) continue;
+      const amount = Number(b.uiTokenAmount?.uiAmountString ?? b.uiTokenAmount?.uiAmount ?? 0);
+      change.set(b.mint, (change.get(b.mint) ?? 0) + sign * amount);
+    }
+  };
+  add(meta.postTokenBalances, 1);
+  add(meta.preTokenBalances, -1);
+
+  let gained = false;
+  let lost = false;
+  for (const [mint, delta] of change) {
+    const threshold = mint === SOL_MINT ? SOL_MOVE_THRESHOLD : 0;
+    if (delta > threshold) gained = true;
+    if (delta < -threshold) lost = true;
+  }
+  return { gained, lost };
 }
 
 function addFlag(entryId, kind, detail, signature) {
@@ -129,8 +178,10 @@ export async function indexEntry(entry, round) {
 
   /* Nothing new and priced recently? Stop here. That one signature check is
      the whole cost of a quiet minute, which is what makes minute-by-minute
-     scoring affordable. */
-  if (!signatures.length && entry.indexed_at && now() - entry.indexed_at < config.revalueIntervalSeconds) {
+     scoring affordable. Never skip the final pass, though: that is where only
+     cash starts to count. */
+  if (phase === 'trading' && !signatures.length && entry.indexed_at &&
+      now() - entry.indexed_at < config.revalueIntervalSeconds) {
     return { entryId: entry.id, skipped: true, pnl: entry.pnl_usd, value: entry.value_usd, trades: entry.trades };
   }
 

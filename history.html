@@ -89,7 +89,9 @@
     var paid = w.payoutSignature
       ? '<a class="paid" href="https://solscan.io/tx/' + encodeURIComponent(w.payoutSignature) + '" target="_blank" rel="noopener">paid ' +
         (w.paidUsd ? F.money(w.paidUsd) : '') + ' ↗</a>'
-      : '<span class="paid pending">payout pending</span>';
+      : w.potShare
+        ? '<span class="paid pending">payout pending</span>'
+        : '<span class="paid pending">not in profit</span>';
     /* A row cannot be one big link: the payout link inside it would be
        dropped by the browser. The address is the link instead. */
     return '' +

@@ -25,11 +25,15 @@ Check the outside world is reachable:
 npm run check
 ```
 
-Run the rule tests (the server must be running):
+Run the rule tests (the server must be running, started with
+`RATE_LIMIT_PER_MINUTE=100` so the test's sign-ups are not throttled — 22 tests):
 
 ```bash
 node src/scripts/selftest.js
 ```
+
+Do not point the self-test at the live server: it registers throwaway wallets,
+which would then appear on the real leaderboard.
 
 ## Settings that matter
 
@@ -84,8 +88,17 @@ with a pretty chart and no buyers is therefore worth what it is really worth.
 At the end of the round only SOL and stablecoins count, so positions have to be
 closed.
 
-Swaps count as trades. Fees, validator tips and rent are ignored. Unsolicited
-airdrops are ignored.
+Swaps count as trades. A transaction is a swap when the wallet signed it and
+its own balances show something went out and something else came in, so
+pump.fun, PumpSwap, Raydium and Jupiter are all recognised without a list of
+programs. Money sent in by another wallet that co-signed a swap is still a
+deposit. Fees, validator tips and rent are ignored. Unsolicited airdrops are
+ignored.
+
+**Fund with SOL.** USDC sent with the older plain `transfer` instruction
+carries no mint in the parsed data and would not be recognised as a deposit.
+Most exchanges and wallets use `transferChecked`, which works, but SOL is the
+safe instruction to give entrants.
 
 **Cost control:** every minute each wallet costs one call to check for new
 activity. Full re-pricing only happens when there are new trades, or every
@@ -127,7 +140,7 @@ Admin (send `Authorization: Bearer <ADMIN_TOKEN>`):
 | POST | `/api/admin/disqualify` | `{entryId, reason}` — re-ranks the round |
 | POST | `/api/admin/pot` | `{round, potUsd}` — set the pot shown on the site |
 | POST | `/api/admin/finalize` | Freeze ranks and shares |
-| POST | `/api/admin/payout` | `{entryId, signature, amountUsd}` — record a payout |
+| POST | `/api/admin/payout` | `{entryId, signature, amountUsd}` — record a payout (replaces any earlier one for that entry). The admin page's **Record payout** button calls this. |
 | POST | `/api/admin/snapshot` | Re-run the holder snapshot |
 
 ## Tools
@@ -159,8 +172,13 @@ alongside the site. It currently runs on Railway.
 - Set the pot each round from the admin page.
 - Back up `data/firsttx.db`: it holds every entry and result.
 
+## Automatic pot
+
+With `FEE_WALLET` and `POT_PERCENT` set, every SOL, USDC or USDT payment that
+lands in the fee wallet while a round is running adds to that round's pot.
+Fees count when they **arrive** in the wallet: on pump.fun creator fees sit in
+a vault until you claim them, so claim during the round for them to count.
+
 ## Not built yet
 
-- Automatic pot calculation from coin fees (set by hand for now)
-- Round history and a hall of fame
 - Alerts when a flag appears

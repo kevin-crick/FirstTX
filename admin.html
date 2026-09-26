@@ -197,8 +197,11 @@
         setState('reviewState', 'No entries yet.');
         return;
       }
+      var finished = data.round && (data.round.phase === 'review' || data.round.phase === 'settled');
+      var potUsd = (data.round && data.round.potUsd) || 0;
       el('review').innerHTML = rows.map(function (e, i) {
         var flags = (e.flags || []).map(flagPill).join(' ');
+        var canPay = finished && e.potShare;
         return '' +
           '<div class="review-row">' +
             '<div class="review-main">' +
@@ -213,9 +216,14 @@
               (e.holdVerified ? ' · holding checked' : ' · holding unverified') +
               (e.compSigned ? '' : ' · address pasted, not signed') +
               (e.firstFunder ? ' · funded by ' + F.shortAddr(e.firstFunder) : '') +
+              (e.payout ? ' · paid ' + F.money(e.payout.amountUsd) : '') +
             '</div>' +
             (flags ? '<div class="review-flags">' + flags + '</div>' : '') +
             '<div class="review-actions">' +
+              (canPay
+                ? '<button class="ghost-link pay" data-id="' + e.id + '" data-owed="' + (potUsd * e.potShare / 100).toFixed(2) + '" type="button">' +
+                    (e.payout ? 'Change payout' : 'Record payout') + '</button> '
+                : '') +
               '<button class="ghost-link dq" data-id="' + e.id + '" type="button">Disqualify</button>' +
             '</div>' +
           '</div>';
@@ -237,6 +245,34 @@
           try {
             await api('/api/admin/disqualify', { method: 'POST', body: JSON.stringify({ entryId: Number(b.dataset.id), reason: reason }) });
             await refresh();
+          } catch (err) {
+            setState('reviewState', err.message, 'bad');
+          }
+        });
+      });
+
+      /* After you send a winner their share, save the payment here so it shows
+         on the past rounds page. Accepts a Solscan link or a bare signature. */
+      document.querySelectorAll('.pay').forEach(function (b) {
+        b.addEventListener('click', async function () {
+          var amount = prompt('How many dollars did you send? Their share of the pot is $' + b.dataset.owed + '.', b.dataset.owed);
+          if (amount === null) return;
+          amount = Number(String(amount).replace(/[$,\s]/g, ''));
+          if (!(amount > 0)) {
+            setState('reviewState', 'That amount is not a number.', 'bad');
+            return;
+          }
+          var link = prompt('Paste the Solscan link of the payment (or its transaction signature).');
+          if (!link) return;
+          var signature = link.trim().split('?')[0].split('#')[0].replace(/\/+$/, '').split('/').pop();
+          if (!/^[1-9A-HJ-NP-Za-km-z]{80,90}$/.test(signature)) {
+            setState('reviewState', 'That does not look like a Solana transaction link. Copy it from the address bar on the Solscan transaction page.', 'bad');
+            return;
+          }
+          try {
+            await api('/api/admin/payout', { method: 'POST', body: JSON.stringify({ entryId: Number(b.dataset.id), amountUsd: amount, signature: signature }) });
+            await refresh();
+            setState('reviewState', 'Payout saved. It now shows on the past rounds page.', 'ok');
           } catch (err) {
             setState('reviewState', err.message, 'bad');
           }

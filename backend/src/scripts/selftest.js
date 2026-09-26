@@ -117,6 +117,45 @@ async function buildRegistration({ holder = newWallet(), comp = newWallet(), non
     wallet,
   );
   check('swap counts as a trade only', swap.isSwap && swap.inbound.length === 0 && swap.outbound.length === 0);
+
+  /* A pump.fun buy: SOL goes out by plain transfer, the token arrives from the
+     bonding curve, and the logs say "Buy" rather than "Swap". The wallet's
+     balances before and after are what give it away. */
+  const curve = 'Curve11111111111111111111111111111111111111';
+  const pumpTx = (extraKeys = [], extraIx = [], solIn = 0) => ({
+    blockTime: 4,
+    meta: {
+      fee: 5000,
+      logMessages: ['Program log: Instruction: Buy'],
+      preBalances: [1_000_000_000, 0, ...extraKeys.map(() => 5_000_000_000)],
+      postBalances: [1_000_000_000 - 5000 - 100_000_000 - 2_039_280 + solIn, 100_000_000, ...extraKeys.map(() => 5_000_000_000 - solIn)],
+      preTokenBalances: [],
+      postTokenBalances: [{ accountIndex: 1, mint: 'Meme1', owner: wallet, uiTokenAmount: { uiAmountString: '350000' } }],
+    },
+    transaction: {
+      message: {
+        accountKeys: [{ pubkey: wallet, signer: true }, { pubkey: curve, signer: false }, ...extraKeys],
+        instructions: [
+          { program: 'system', parsed: { type: 'transfer', info: { source: wallet, destination: curve, lamports: 100_000_000 } } },
+          ...extraIx,
+        ],
+      },
+    },
+  });
+  const pumpBuy = classifyTransaction(pumpTx(), wallet);
+  check('pump.fun buy counts as a trade, not a withdrawal', pumpBuy.isSwap && pumpBuy.outbound.length === 0);
+
+  /* The same buy with a friend co-signing a 0.05 SOL top-up must still show the top-up. */
+  const friend = 'Friend1111111111111111111111111111111111111';
+  const sneaky = classifyTransaction(
+    pumpTx(
+      [{ pubkey: friend, signer: true }],
+      [{ program: 'system', parsed: { type: 'transfer', info: { source: friend, destination: wallet, lamports: 50_000_000 } } }],
+      50_000_000,
+    ),
+    wallet,
+  );
+  check('a top-up hidden inside a trade is still a deposit', sneaky.isSwap && sneaky.inbound.length === 1 && sneaky.inbound[0].amount === 0.05);
 }
 
 /* ------------------------------------------------------------- live server */
