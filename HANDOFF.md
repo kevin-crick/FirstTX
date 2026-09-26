@@ -13,7 +13,11 @@ three split a prize pot — a share of the coin's creator fees — **in proporti
 to their profit** (e.g. $5,000 / $3,000 / $2,000 → 50% / 30% / 20%). Only
 wallets in profit get paid; if nobody is up, the pot rolls over.
 
-X account: **@tryfirsttx**. Site: **firsttx.netlify.app**. Solana only.
+X account: **@tryfirsttx**. Site: **firsttx.trade** (custom domain on Netlify;
+`www.` redirects to it; **firsttx.netlify.app** still works). Solana only.
+Every address the site is served from must be listed in Railway's
+`ALLOWED_ORIGINS`, or the pages load but show no data and the admin page
+cannot unlock.
 
 ## Rules as built
 
@@ -93,8 +97,10 @@ resets to round 001.
 **Still to do, in this order:**
 
 1. **Push the fixes** (GitHub Desktop → Commit to main → Push origin).
-2. **Rotate the Helius key and admin token** — both were exposed in an old
-   chat.
+2. **Admin token** was rotated on 2026-09-26 (but then pasted into chat once).
+   **Helius key rotation skipped by choice.** If the leaderboard ever stops
+   updating, check the Helius dashboard for used-up credits first; the fix is
+   a new key in Railway's `RPC_URL` and `backend\.env`.
 3. **A dry run with real money** (~$10), funded **in SOL**: enter, fund, make
    a couple of swaps (one on pump.fun), start the round, end it, review.
    Scoring has never been proven on a real funded wallet.
@@ -109,7 +115,7 @@ shows for unapplied changes. Creator fees only
 7. **Netlify free credits ran out once already** and skipped deploys. If it
    happens again, options are Cloudflare Pages (free), serving the site from
    Railway, or Netlify Pro at $20/month.
-8. Optional: a terms/disclaimer line on the rules page, and a real domain.
+8. Optional: a terms/disclaimer line on the rules page.
 
 ## How to work with me
 
