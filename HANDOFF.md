@@ -93,6 +93,31 @@ resets to round 001.
   (asks for the amount and the Solscan link). Recording again replaces it.
 - Past rounds page: a top-three wallet with no profit now says "not in profit"
   instead of "payout pending".
+- Reliability under load: a failed Jupiter price call no longer counts as a
+  $0 price (it keeps the last known price); a failed token lookup no longer
+  counts as "holds nothing"; the freshness check refuses instead of passing a
+  wallet when Solana data cannot be fetched; the holder snapshot is retried
+  automatically if it fails or the coin has no price yet; the end-of-round
+  cash-only valuation retries wallets that errored before freezing results.
+- `DB_PATH` setting lets a test run on its own database, e.g.
+  `DB_PATH=data/test.db`. Never set it on Railway.
+- Solana calls now go through one queue capped at 8 per second (Helius free
+  allows 10), pause together when Helius says "too many requests", retry for
+  about 15 seconds, and time out after 20 seconds. Before this, a rush of
+  sign-ups had some refused (8 of 200 in the load test). Raise
+  `RPC_MAX_PER_SECOND` in Railway if you move to a paid Helius plan.
+
+**Load test, 2026-09-26** (`node src/scripts/loadtest.js 150 50 40`, report in
+`backend/data/loadtest-*-report.md`): 200 brand-new wallets entered through the
+real sign-up (150 before the start, 50 mid-round), a 40-minute round on live
+Solana and Jupiter data. On the final code every check passed: all sign-ups
+accepted, a used wallet still refused, 0 scoring errors, scores never older
+than ~6 minutes, API under 10ms, round ended and froze by itself. The wallets
+were empty, so scores stayed at $0; trade scoring itself still needs the $10
+dry run. Capacity on the free Helius plan is roughly **300 entrants** before
+minute-by-minute passes start running long; above that, upgrade Helius and
+raise `RPC_MAX_PER_SECOND`. Local `backend\.env` has
+`INDEX_INTERVAL_SECONDS=300` (Railway uses 60) — the load test overrides it.
 
 **Still to do, in this order:**
 

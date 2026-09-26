@@ -152,6 +152,7 @@ Admin (send `Authorization: Bearer <ADMIN_TOKEN>`):
 | `node src/scripts/inspect-wallet.js <address>` | Values any wallet the way the leaderboard does |
 | `node src/scripts/replay-wallet.js [address]` | Replays real transactions through the classifier |
 | `node src/scripts/dev-register.js` | Registers a throwaway wallet pair |
+| `node src/scripts/loadtest.js [wallets] [late] [minutes]` | A full round on its own database with brand-new wallets, live data, and a report in `data/`. Watch it at `http://localhost:5173/leaderboard.html`. |
 
 ## Deploying
 

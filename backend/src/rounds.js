@@ -153,6 +153,13 @@ export async function takeSnapshot(roundId) {
   const prices = await getPrices([config.coinMint]);
   const price = prices.get(config.coinMint) ?? 0;
 
+  /* No price means every holder would look like they hold $0 and nobody
+     could enter. Leave it failed so the next pass tries again. */
+  if (!(price > 0)) {
+    run(`UPDATE rounds SET snapshot_status = 'failed' WHERE id = ?`, roundId);
+    return { ok: false, reason: 'no price for the coin yet — will retry' };
+  }
+
   run('DELETE FROM snapshot_holders WHERE round_id = ?', roundId);
   const insert = `INSERT OR REPLACE INTO snapshot_holders (round_id, owner, ui_amount, usd_value) VALUES (?, ?, ?, ?)`;
   let kept = 0;
@@ -171,9 +178,12 @@ export function holderSnapshotEntry(roundId, owner) {
   return queryOne('SELECT * FROM snapshot_holders WHERE round_id = ? AND owner = ?', roundId, owner);
 }
 
-/** Rounds open for registration whose snapshot has not been taken yet. */
+/** Rounds open for registration whose snapshot has not been taken yet, or
+    whose last attempt failed (a hiccup at the RPC or no price yet). */
 export function roundsNeedingSnapshot() {
-  return queryAll(`SELECT * FROM rounds WHERE snapshot_status = 'pending' AND status IN ('registration', 'live')`);
+  return queryAll(
+    `SELECT * FROM rounds WHERE snapshot_status IN ('pending', 'failed') AND status IN ('registration', 'live')`,
+  );
 }
 
 export { DAY };

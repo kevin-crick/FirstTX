@@ -73,7 +73,8 @@ export const config = {
   /* Total value that may leak out in dust before it stops looking like fees. */
   dustOutflowBudgetUsd: num('DUST_OUTFLOW_BUDGET_USD', 25),
 
-  dbPath: path.join(ROOT, 'data', 'firsttx.db'),
+  /* Overridable so a simulation can run on its own database. */
+  dbPath: process.env.DB_PATH ? path.resolve(ROOT, process.env.DB_PATH) : path.join(ROOT, 'data', 'firsttx.db'),
 };
 
 /* Well-known mints. */

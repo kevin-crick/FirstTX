@@ -53,9 +53,21 @@ export async function getPrices(mints) {
   /* The API takes batches of ids. */
   for (let i = 0; i < missing.length; i += 40) {
     const batch = missing.slice(i, i + 40);
-    const json = await fetchJson(`${PRICE_API}?ids=${batch.join(',')}`);
+    let json = await fetchJson(`${PRICE_API}?ids=${batch.join(',')}`);
+    if (!json) {
+      await new Promise((r) => setTimeout(r, 1500));
+      json = await fetchJson(`${PRICE_API}?ids=${batch.join(',')}`);
+    }
     for (const mint of batch) {
-      const price = Number(json?.[mint]?.usdPrice);
+      if (!json) {
+        /* The API itself failed. A price of zero would wipe out every wallet's
+           value for a minute, so fall back to the last known price and do not
+           cache the failure. */
+        const stale = priceCache.get(mint);
+        out.set(mint, stale ? stale.usdPrice : 0);
+        continue;
+      }
+      const price = Number(json[mint]?.usdPrice);
       const value = Number.isFinite(price) ? price : 0;
       priceCache.set(mint, { usdPrice: value, at: now });
       out.set(mint, value);

@@ -4,7 +4,7 @@ import http from 'node:http';
 import { config } from './config.js';
 import { handleRequest } from './api.js';
 import { ensureRounds, refreshStatuses, currentRound, roundsNeedingSnapshot, takeSnapshot, phaseOf } from './rounds.js';
-import { indexRound, finalizeRound } from './indexer.js';
+import { indexRound, indexEntry, finalizeRound } from './indexer.js';
 import { updateFees, feesEnabled } from './fees.js';
 import { queryOne, now } from './db.js';
 
@@ -59,9 +59,28 @@ async function tick() {
         round.id,
       );
       if (!frozen?.n) {
-        await indexRound(round); // final valuation: cash only
-        const result = finalizeRound(round);
-        log(`round ${round.number} finished:`, result);
+        const results = await indexRound(round); // final valuation: cash only
+        let failed = results.filter((r) => r.error).map((r) => r.entryId);
+        for (let attempt = 0; failed.length && attempt < 2; attempt++) {
+          await new Promise((r) => setTimeout(r, 5000));
+          const still = [];
+          for (const id of failed) {
+            const entry = queryOne('SELECT * FROM entries WHERE id = ?', id);
+            await indexEntry(entry, round).catch(() => still.push(id));
+          }
+          failed = still;
+        }
+        /* A wallet without its final cash-only valuation would be ranked on a
+           stale number. Try again next pass, and only give up after ten
+           minutes so one broken wallet cannot hold the round open forever. */
+        const endedMinutesAgo = (now() - round.ends_at) / 60;
+        if (failed.length && endedMinutesAgo < 10) {
+          log(`round ${round.number}: ${failed.length} wallet(s) could not get a final valuation yet — retrying next pass`);
+        } else {
+          if (failed.length) log(`WARNING round ${round.number}: ${failed.length} wallet(s) ranked without a final valuation`);
+          const result = finalizeRound(round);
+          log(`round ${round.number} finished:`, result);
+        }
       }
     }
   } catch (err) {
